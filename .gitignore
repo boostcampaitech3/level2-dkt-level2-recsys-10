@@ -1,0 +1,47 @@
+## Folder
+__MACOSX/
+.cache/
+.ipython/
+.jupyter/
+.local/
+.vscode-server/
+*.ipynb_checkpoints/
+*data/
+*output/
+.idea/
+.config/
+*special_mission/
+.nv/
+*wandb/
+
+## data
+*.tsv
+*.json
+*.csv
+*.txt
+*.sh
+*.out
+
+## file
+.bash_history
+.bash_profile
+.bashrc
+.conda
+.condarc
+.profile
+.viminfo
+.wget-hsts
+.DS_Store
+.gitconfig
+.empty
+.python_history
+__pycache__
+.netrc
+.screenrc
+*test.ipynb
+
+## shell script
+*run.sh 
+my_work_*.yaml
+run_hyper*.sh
+hyper-*.test
