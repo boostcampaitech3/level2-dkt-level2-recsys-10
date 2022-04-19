@@ -39,6 +39,7 @@ __pycache__
 .netrc
 .screenrc
 *test.ipynb
+.git-credentials
 
 ## shell script
 *run.sh 
