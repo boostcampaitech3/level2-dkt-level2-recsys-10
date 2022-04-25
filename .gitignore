@@ -13,6 +13,9 @@ __MACOSX/
 *special_mission/
 .nv/
 *wandb/
+asset/
+models/
+weight/
 
 ## data
 *.tsv
@@ -21,6 +24,7 @@ __MACOSX/
 *.txt
 *.sh
 *.out
+*.log
 
 ## file
 .bash_history
