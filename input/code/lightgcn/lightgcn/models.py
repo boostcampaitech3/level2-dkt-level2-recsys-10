@@ -43,6 +43,11 @@ def train(
         edge, label = train_data["edge"], train_data["label"]
         label = label.to("cpu").detach().numpy()
         valid_data = dict(edge=edge[:, eids], label=label[eids])
+    else:
+        edge, label = valid_data["edge"], valid_data["label"]
+        label = label.to("cpu").detach().numpy()
+        valid_data = dict(edge=edge, label=label)
+
 
     logger.info(f"Training Started : n_epoch={n_epoch}")
     best_auc, best_epoch = 0, -1
