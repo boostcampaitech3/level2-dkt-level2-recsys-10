@@ -21,7 +21,7 @@ weight/
 *.tsv
 *.json
 *.csv
-*.txt
+# *.txt
 *.sh
 *.out
 *.log
