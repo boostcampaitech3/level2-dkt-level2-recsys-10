@@ -3,14 +3,14 @@ import torch
 from config import CFG, logging_conf
 from lightgcn.datasets import prepare_dataset
 from lightgcn.models import build, train
-from lightgcn.utils import class2dict, get_logger
+from lightgcn.utils import class2dict, get_logger, setSeeds
 
 if CFG.user_wandb:
     import wandb
 
     wandb.init(**CFG.wandb_kwargs, config=class2dict(CFG))
 
-
+setSeeds(CFG.seed)
 logger = get_logger(logging_conf)
 use_cuda = torch.cuda.is_available() and CFG.use_cuda_if_available
 device = torch.device("cuda" if use_cuda else "cpu")
