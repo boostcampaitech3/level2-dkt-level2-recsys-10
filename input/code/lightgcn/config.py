@@ -10,7 +10,7 @@ class CFG:
     wandb_kwargs = dict(project="DKT", entity="egsbj", name = model)
 
     # data
-    basepath = "/opt/ml/input/data/"
+    basepath = "../../data/"
     loader_verbose = True
 
     # dump
