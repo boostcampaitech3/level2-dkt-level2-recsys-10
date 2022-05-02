@@ -7,7 +7,7 @@ class CFG:
     wandb_kwargs = dict(project="dkt-gcn")
 
     # data
-    basepath = "/opt/ml/input/data/"
+    basepath = "../../data/"
     loader_verbose = True
 
     # dump
