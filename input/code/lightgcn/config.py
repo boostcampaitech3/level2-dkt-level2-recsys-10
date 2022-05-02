@@ -2,9 +2,12 @@
 # CFG
 # ====================================================
 class CFG:
+    # Custom
+    model = 'lightgcn' # 추후에 모델 추가시 모델별 메소드 생성해주세요!
+    
     use_cuda_if_available = True
     user_wandb = True
-    wandb_kwargs = dict(project="dkt-gcn")
+    wandb_kwargs = dict(project="DKT", entity="egsbj", name = model)
 
     # data
     basepath = "/opt/ml/input/data/"
@@ -15,8 +18,8 @@ class CFG:
     pred_file = "submission.csv"
 
     # build
-    embedding_dim = 64  # int
-    num_layers = 1  # int
+    hidden_dim = 64  # int
+    n_layers = 1  # int
     alpha = None  # Optional[Union[float, Tensor]]
     build_kwargs = {}  # other arguments
     weight = "./weight/best_model.pt"
@@ -25,7 +28,10 @@ class CFG:
     seed = 42
     n_epoch = 20
     learning_rate = 0.001
+    n_epochs = 20
+    lr = 0.001
     weight_basepath = "./weight"
+
 
 
 logging_conf = {  # only used when 'user_wandb==False'

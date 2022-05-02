@@ -19,10 +19,10 @@ def main(args):
     preprocess.load_train_data(test_file_name= args.test_file_name, train_file_name= args.file_name)
     train_data = preprocess.get_train_data()
     valid_data = preprocess.get_valid_data()
-
-    wandb.init(project="dkt", config=vars(args))
+    
+    wandb.init(project="DKT", entity='egsbj', name=args.model, config=vars(args))
     trainer.run(args, train_data, valid_data)
-
+    
 
 if __name__ == "__main__":
     args = parse_args(mode="train")
