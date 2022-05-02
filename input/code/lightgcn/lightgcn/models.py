@@ -72,7 +72,14 @@ def train(
             if use_wandb:
                 import wandb
 
-                wandb.log(dict(loss=loss, acc=acc, auc=auc))
+                wandb.log(
+                    {
+                        "epoch":e,
+                        "train_loss":loss, 
+                        "valid_acc":acc, 
+                        "valid_auc":auc
+                    }
+                )
 
         if weight:
             if auc > best_auc:
