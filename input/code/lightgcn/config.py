@@ -25,6 +25,9 @@ class CFG:
     weight = "./weight/best_model.pt"
 
     # train
+    seed = 42
+    n_epoch = 20
+    learning_rate = 0.001
     n_epochs = 20
     lr = 0.001
     weight_basepath = "./weight"
