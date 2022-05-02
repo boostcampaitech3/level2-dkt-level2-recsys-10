@@ -29,8 +29,8 @@ def main():
     logger.info("[2/2] Model Building - Start")
     model = build(
         n_node,
-        embedding_dim=CFG.embedding_dim,
-        num_layers=CFG.num_layers,
+        embedding_dim=CFG.hidden_dim,
+        num_layers=CFG.n_layers,
         alpha=CFG.alpha,
         logger=logger.getChild("build"),
         **CFG.build_kwargs
@@ -47,8 +47,8 @@ def main():
         model,
         train_data,
         valid_data,
-        n_epoch=CFG.n_epoch,
-        learning_rate=CFG.learning_rate,
+        n_epoch=CFG.n_epochs,
+        learning_rate=CFG.lr,
         use_wandb=CFG.user_wandb,
         weight=CFG.weight_basepath,
         logger=logger.getChild("train"),
