@@ -42,6 +42,7 @@ def train(
         eids = np.random.permutation(eids)[:1000]
         edge, label = train_data["edge"], train_data["label"]
         label = label.to("cpu").detach().numpy()
+        # valid는 기존 eids에서 
         valid_data = dict(edge=edge[:, eids], label=label[eids])
 
     logger.info(f"Training Started : n_epoch={n_epoch}")
@@ -56,7 +57,7 @@ def train(
         loss.backward()
         optimizer.step()
 
-        with torch.no_grad():
+        with torch.no_grad(): # valid
             prob = model.predict_link(valid_data["edge"], prob=True)
             prob = prob.detach().cpu().numpy()
             acc = accuracy_score(valid_data["label"], prob > 0.5)

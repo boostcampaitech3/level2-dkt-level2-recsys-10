@@ -86,9 +86,9 @@ class Preprocess:
         df = pd.read_csv(csv_file_path)  # , nrows=100000)
         df = self.__feature_engineering(df)
         df = self.__preprocessing(df, is_train)
-
         # 추후 feature를 embedding할 시에 embedding_layer의 input 크기를 결정할때 사용
 
+        # 인코딩된 mapper 정보 저장
         self.args.n_questions = len(
             np.load(os.path.join(self.args.asset_dir, "assessmentItemID_classes.npy"))
         )
@@ -98,7 +98,7 @@ class Preprocess:
         self.args.n_tag = len(
             np.load(os.path.join(self.args.asset_dir, "KnowledgeTag_classes.npy"))
         )
-
+        # 유저별 시간을 기준으로 sort
         df = df.sort_values(by=["userID", "Timestamp"], axis=0)
         columns = ["userID", "assessmentItemID", "testId", "answerCode", "KnowledgeTag"]
         group = (
@@ -142,6 +142,7 @@ class DKTDataset(torch.utils.data.Dataset):
         if seq_len > self.args.max_seq_len:
             for i, col in enumerate(cate_cols):
                 cate_cols[i] = col[-self.args.max_seq_len :]
+            # 모든 seq가 의미가 있으므로 모두 1로
             mask = np.ones(self.args.max_seq_len, dtype=np.int16)
         else:
             mask = np.zeros(self.args.max_seq_len, dtype=np.int16)
@@ -164,11 +165,12 @@ from torch.nn.utils.rnn import pad_sequence
 
 
 def collate(batch):
-    col_n = len(batch[0])
+    col_n = len(batch[0]) # batch 길이
     col_list = [[] for _ in range(col_n)]
     max_seq_len = len(batch[0][-1])
 
     # batch의 값들을 각 column끼리 그룹화
+    # seq 자리에 0(padding)을 채워주는 단계 여기서는 pre padding을 사용한다.
     for row in batch:
         for i, col in enumerate(row):
             pre_padded = torch.zeros(max_seq_len)
@@ -194,7 +196,7 @@ def get_loaders(args, train, valid):
             shuffle=True,
             batch_size=args.batch_size,
             pin_memory=pin_memory,
-            collate_fn=collate,
+            collate_fn=collate, # batch_size 만큼 뽑아주기위해서 padding을 해준다
         )
     if valid is not None:
         valset = DKTDataset(valid, args)

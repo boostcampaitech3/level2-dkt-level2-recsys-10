@@ -5,7 +5,7 @@ from lightgcn.datasets import prepare_dataset
 from lightgcn.models import build, train
 from lightgcn.utils import class2dict, get_logger
 
-if CFG.user_wandb:
+if CFG.user_wandb: # True이면
     import wandb
 
     wandb.init(**CFG.wandb_kwargs, config=class2dict(CFG))
@@ -21,6 +21,7 @@ def main():
     logger.info("Task Started")
 
     logger.info("[1/1] Data Preparing - Start")
+    # n_node = len(user+item)
     train_data, test_data, n_node = prepare_dataset(
         device, CFG.basepath, verbose=CFG.loader_verbose, logger=logger.getChild("data")
     )
