@@ -44,6 +44,11 @@ def train(
         label = label.to("cpu").detach().numpy()
         # valid는 기존 eids에서 
         valid_data = dict(edge=edge[:, eids], label=label[eids])
+    else:
+        edge, label = valid_data["edge"], valid_data["label"]
+        label = label.to("cpu").detach().numpy()
+        valid_data = dict(edge=edge, label=label)
+
 
     logger.info(f"Training Started : n_epoch={n_epoch}")
     best_auc, best_epoch = 0, -1
@@ -68,7 +73,14 @@ def train(
             if use_wandb:
                 import wandb
 
-                wandb.log(dict(loss=loss, acc=acc, auc=auc))
+                wandb.log(
+                    {
+                        "epoch":e,
+                        "train_loss":loss, 
+                        "valid_acc":acc, 
+                        "valid_auc":auc
+                    }
+                )
 
         if weight:
             if auc > best_auc:

@@ -10,7 +10,7 @@ def parse_args(mode="train"):
 
     parser.add_argument(
         "--data_dir",
-        default="../../data/",
+        default="../../data/", 
         type=str,
         help="data directory",
     )
@@ -26,7 +26,7 @@ def parse_args(mode="train"):
         "--model_dir", default="models/", type=str, help="model directory"
     )
     parser.add_argument(
-        "--model_name", default="model.pt", type=str, help="model file name"
+        "--model_name", default="model.pkl", type=str, help="model file name"
     )
 
     parser.add_argument(
@@ -61,11 +61,16 @@ def parse_args(mode="train"):
     )
 
     ### 중요 ###
-    parser.add_argument("--model", default="lstm", type=str, help="model type")
+    parser.add_argument("--model", default="lightgbm", type=str, help="model type")
     parser.add_argument("--optimizer", default="adam", type=str, help="optimizer type")
     parser.add_argument(
         "--scheduler", default="plateau", type=str, help="scheduler type"
     )
+
+    parser.add_argument("--objective", default='binary', type=str)
+    parser.add_argument("--verbose_eval", default=100, type=int)
+    parser.add_argument("--num_boost_round", default=500, type=int)
+    parser.add_argument("--early_stopping_rounds", default=100, type=int)
 
     args = parser.parse_args()
 

@@ -14,27 +14,18 @@ class Preprocess:
     def __init__(self, args):
         self.args = args
         self.train_data = None
+        self.valid_data = None
         self.test_data = None
 
     def get_train_data(self):
         return self.train_data
 
+    def get_valid_data(self):
+        return self.valid_data    
+
     def get_test_data(self):
         return self.test_data
 
-    def split_data(self, data, ratio=0.7, shuffle=True, seed=0):
-        """
-        split data into two parts with a given ratio.
-        """
-        if shuffle:
-            random.seed(seed)  # fix to default seed 0
-            random.shuffle(data)
-
-        size = int(len(data) * ratio)
-        data_1 = data[:size]
-        data_2 = data[size:]
-
-        return data_1, data_2
 
     def __save_labels(self, encoder, name):
         le_path = os.path.join(self.args.asset_dir, name + "_classes.npy")
@@ -81,9 +72,20 @@ class Preprocess:
         # TODO
         return df
 
-    def load_data_from_file(self, file_name, is_train=True):
-        csv_file_path = os.path.join(self.args.data_dir, file_name)
-        df = pd.read_csv(csv_file_path)  # , nrows=100000)
+    def load_data_from_file(self, test_file_name, train_file_name=None, is_train=True):
+        test_csv_file_path = os.path.join(self.args.data_dir, test_file_name)
+        test_df = pd.read_csv(test_csv_file_path)
+        
+        if is_train:
+            test_df = test_df.query("answerCode != -1")
+            train_csv_file_path = os.path.join(self.args.data_dir, train_file_name)
+            train_df = pd.read_csv(train_csv_file_path)
+            self.train_userID = train_df['userID'].unique().tolist()
+            self.valid_userID = test_df['userID'].unique().tolist()
+            df = pd.concat([train_df, test_df], axis=0)
+        else :
+            df = test_df
+
         df = self.__feature_engineering(df)
         df = self.__preprocessing(df, is_train)
         # 추후 feature를 embedding할 시에 embedding_layer의 input 크기를 결정할때 사용
@@ -116,11 +118,13 @@ class Preprocess:
 
         return group.values
 
-    def load_train_data(self, file_name):
-        self.train_data = self.load_data_from_file(file_name)
+    def load_train_data(self, test_file_name, train_file_name):
+        data = self.load_data_from_file(test_file_name, train_file_name)
+        self.valid_data = data[self.valid_userID]        
+        self.train_data = data[self.train_userID]
 
-    def load_test_data(self, file_name):
-        self.test_data = self.load_data_from_file(file_name, is_train=False)
+    def load_test_data(self, test_file_name):
+        self.test_data = self.load_data_from_file(test_file_name, is_train=False)
 
 
 class DKTDataset(torch.utils.data.Dataset):

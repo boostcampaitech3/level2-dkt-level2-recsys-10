@@ -13,14 +13,18 @@ __MACOSX/
 *special_mission/
 .nv/
 *wandb/
+asset/
+models/
+weight/
 
 ## data
 *.tsv
 *.json
 *.csv
-*.txt
+# *.txt
 *.sh
 *.out
+*.log
 
 ## file
 .bash_history

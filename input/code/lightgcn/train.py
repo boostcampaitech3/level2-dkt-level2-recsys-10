@@ -3,14 +3,14 @@ import torch
 from config import CFG, logging_conf
 from lightgcn.datasets import prepare_dataset
 from lightgcn.models import build, train
-from lightgcn.utils import class2dict, get_logger
+from lightgcn.utils import class2dict, get_logger, setSeeds
 
 if CFG.user_wandb: # True이면
     import wandb
 
     wandb.init(**CFG.wandb_kwargs, config=class2dict(CFG))
 
-
+setSeeds(CFG.seed)
 logger = get_logger(logging_conf)
 use_cuda = torch.cuda.is_available() and CFG.use_cuda_if_available
 device = torch.device("cuda" if use_cuda else "cpu")
@@ -21,8 +21,12 @@ def main():
     logger.info("Task Started")
 
     logger.info("[1/1] Data Preparing - Start")
+<<<<<<< HEAD
     # n_node = len(user+item)
     train_data, test_data, n_node = prepare_dataset(
+=======
+    train_data, valid_data, test_data, n_node = prepare_dataset(
+>>>>>>> origin/dev
         device, CFG.basepath, verbose=CFG.loader_verbose, logger=logger.getChild("data")
     )
     logger.info("[1/1] Data Preparing - Done")
@@ -30,8 +34,8 @@ def main():
     logger.info("[2/2] Model Building - Start")
     model = build(
         n_node,
-        embedding_dim=CFG.embedding_dim,
-        num_layers=CFG.num_layers,
+        embedding_dim=CFG.hidden_dim,
+        num_layers=CFG.n_layers,
         alpha=CFG.alpha,
         logger=logger.getChild("build"),
         **CFG.build_kwargs
@@ -47,8 +51,9 @@ def main():
     train(
         model,
         train_data,
-        n_epoch=CFG.n_epoch,
-        learning_rate=CFG.learning_rate,
+        valid_data,
+        n_epoch=CFG.n_epochs,
+        learning_rate=CFG.lr,
         use_wandb=CFG.user_wandb,
         weight=CFG.weight_basepath,
         logger=logger.getChild("train"),

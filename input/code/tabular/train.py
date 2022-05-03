@@ -3,9 +3,9 @@ import os
 import torch
 import wandb
 from args import parse_args
-from dkt import trainer
-from dkt.dataloader import Preprocess
-from dkt.utils import setSeeds
+from tabular import trainer
+from tabular.dataloader import Preprocess
+from tabular.utils import setSeeds
 
 
 def main(args):
@@ -16,13 +16,20 @@ def main(args):
     args.device = device
 
     preprocess = Preprocess(args)
-    preprocess.load_train_data(test_file_name= args.test_file_name, train_file_name= args.file_name)
+
+    print('load_train_data')
+    preprocess.load_train_data(args.file_name)
+    print('get train data from preprocess class')
     train_data = preprocess.get_train_data()
-    valid_data = preprocess.get_valid_data()
-    
-    wandb.init(project="DKT", entity='egsbj', name=args.model, config=vars(args))
+
+    # train, valid split
+    print('train, valid split')
+    train_data, valid_data = preprocess.split_data(train_data)
+
+    # wandb.init(project="tabular", config=vars(args))
+    print('train')
     trainer.run(args, train_data, valid_data)
-    
+
 
 if __name__ == "__main__":
     args = parse_args(mode="train")
