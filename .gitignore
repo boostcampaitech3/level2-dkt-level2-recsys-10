@@ -16,6 +16,7 @@ __MACOSX/
 asset/
 models/
 weight/
+catboost_info/
 
 ## data
 *.tsv

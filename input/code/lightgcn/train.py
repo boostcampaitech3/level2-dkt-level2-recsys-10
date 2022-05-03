@@ -21,12 +21,8 @@ def main():
     logger.info("Task Started")
 
     logger.info("[1/1] Data Preparing - Start")
-<<<<<<< HEAD
     # n_node = len(user+item)
-    train_data, test_data, n_node = prepare_dataset(
-=======
     train_data, valid_data, test_data, n_node = prepare_dataset(
->>>>>>> origin/dev
         device, CFG.basepath, verbose=CFG.loader_verbose, logger=logger.getChild("data")
     )
     logger.info("[1/1] Data Preparing - Done")

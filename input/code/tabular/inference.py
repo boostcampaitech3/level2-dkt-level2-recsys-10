@@ -10,13 +10,14 @@ def main(args):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     args.device = device
 
+    print('[STEP 1] Load the data') # train, test data 전부 로드
     preprocess = Preprocess(args)
-    print('load_test_data')
-    preprocess.load_test_data(args.test_file_name)
-    print('get test data from preprocess class')
-    test_data = preprocess.get_test_data()
+    preprocess.load_test_data(test_file_name= args.test_file_name, train_file_name= args.file_name)
 
-    print('inference')
+    print('[STEP 2] Preprocess test data satisfying')
+    test_data = preprocess.get_test_data()
+    
+    print('[STEP 3] Inference')
     trainer.inference(args, test_data)
 
 
