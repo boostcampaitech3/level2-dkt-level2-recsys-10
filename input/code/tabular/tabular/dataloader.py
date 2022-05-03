@@ -129,9 +129,9 @@ class Preprocess:
 
     def load_test_data(self, test_file_name, train_file_name):
         data = self.load_data_from_file(test_file_name, train_file_name, is_train=False)
-        self.test_data = data[self.test_index]
-        self.test_data.drop('answerCode', axis=1, inplace=True)
-
+        self.test_data = data[self.test_index].copy()
+        self.test_data = self.test_data.drop('answerCode', axis=1)
+        self.test_data = self.test_data[self.FEATS]
 
     def convert_dataset(self, train_data, valid_data):
         if self.args.model == 'lightgbm':
@@ -160,5 +160,5 @@ class Preprocess:
 
         return lgb_train, lgb_valid, X_valid, y_valid
 
-    def get_cb_data(train, test, FEATS):
+    def get_cb_data(self, train, test, FEATS):
         pass

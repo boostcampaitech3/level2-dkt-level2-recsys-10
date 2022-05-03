@@ -38,11 +38,7 @@ def model_predict(model, X_valid, y_valid):
 
 def inference(args, test_data):    
     model = load_model(args)
-
-    FEATS = ['KnowledgeTag', 'user_correct_answer', 'user_total_answer', 
-            'user_acc', 'test_mean', 'test_sum', 'tag_mean','tag_sum']
-    # MAKE PREDICTION
-    total_preds = model.predict(test_data[FEATS])
+    total_preds = model.predict(test_data)
 
     write_path = os.path.join(args.output_dir, "submission.csv")
     if not os.path.exists(args.output_dir):
