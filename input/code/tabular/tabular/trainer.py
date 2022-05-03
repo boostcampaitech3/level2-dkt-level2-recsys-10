@@ -1,3 +1,4 @@
+from itertools import count
 import math
 import os
 
@@ -25,22 +26,40 @@ def run(args, train_data, valid_data, X_valid, y_valid):
                 ]
             )
     elif args.model == 'catboost':
+        custom_loss = ["AUC", "Accuracy"]
+
         model = CatBoostClassifier(
             iterations=args.num_boost_round,
             learning_rate=0.001, # TODO lr 관련 파라미터 확인하기
-            task_type='GPU' # TODO GPU 사용 가능할 때만 사용하록 if 문으로 변경
+            task_type='GPU', # TODO GPU 사용 가능할 때만 사용하록 if 문으로 변경
+            custom_loss = custom_loss
         )
         model.fit(
             train_data, 
             eval_set=valid_data, 
             use_best_model=True, 
+            # cat_features = # TODO category feature 목록 넣기
             early_stopping_rounds=args.early_stopping_rounds, 
             verbose=args.verbose_eval)
 
     
     auc, acc = model_predict(args, model, X_valid, y_valid)
     save_model(args, model)
-    wandb.log({'valid_auc':auc, 'valid_acc':acc})
+
+    if args.model == 'lightgbm':
+        wandb.log({'valid_auc':auc, 'valid_acc':acc})
+    elif args.model == 'catboost':
+        eval_result = model.get_evals_result()
+        list_run = ['learn', 'validation']
+        
+        for i in range(0, args.num_boost_round):
+            wandb.log({
+                "train_loss" : eval_result[list_run[0]]['Logloss'][i],
+                "train_acc" : eval_result[list_run[0]][custom_loss[1]][i],
+                "valid_auc" : eval_result[list_run[1]][custom_loss[0]][i],
+                "valid_acc" : eval_result[list_run[1]][custom_loss[1]][i],
+                "itration" : i
+            })
 
 def model_predict(args, model, X_valid, y_valid):
     if args.model == 'lightgbm':

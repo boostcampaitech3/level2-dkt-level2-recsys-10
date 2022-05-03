@@ -93,8 +93,8 @@ class Preprocess:
             'user_acc', 'test_mean', 'test_sum', 'tag_mean','tag_sum']
 
         # TODO catboost는 Categorical columns name을 지정해줘야한다.
-        self.CATS = ['KnowledgeTag']
-        
+        #self.CATS = ['KnowledgeTag']
+        self.CATS = []
         return df
 
     def load_data_from_file(self, test_file_name, train_file_name=None, is_train = True):
