@@ -8,7 +8,7 @@ import wandb
 from .criterion import get_criterion
 from .dataloader import get_loaders
 from .metric import get_metric
-from .model import LSTM, LSTMATTN, Bert
+from .model import LSTM, LSTMATTN, Bert, Saint, LastQuery
 from .optimizer import get_optimizer
 from .scheduler import get_scheduler
 
@@ -61,7 +61,7 @@ def run(args, train_data, valid_data):
                     "state_dict": model_to_save.state_dict(),
                 },
                 args.model_dir,
-                "model.pt",
+                f"{args.model}.pt",
             )
             early_stopping_counter = 0
         else:
@@ -197,7 +197,12 @@ def get_model(args):
         model = LSTMATTN(args)
     if args.model == "bert":
         model = Bert(args)
-
+    if args.model == 'last_query':
+        model = LastQuery(args, post_pad=False)
+    if args.model == 'last_query_post':
+        model = LastQuery(args, post_pad=True)
+    if args.model == 'saint':
+        model = Saint(args)
     model.to(args.device)
 
     return model
@@ -272,7 +277,7 @@ def save_checkpoint(state, model_dir, model_filename):
 
 def load_model(args):
 
-    model_path = os.path.join(args.model_dir, args.model_name)
+    model_path = os.path.join(args.model_dir, f"{args.model}.pt")
     print("Loading Model from:", model_path)
     load_state = torch.load(model_path)
     model = get_model(args)
