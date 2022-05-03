@@ -8,6 +8,7 @@ import pandas as pd
 import torch
 import tqdm
 import lightgbm as lgb
+from catboost import Pool
 from sklearn.preprocessing import LabelEncoder
 
 
@@ -90,6 +91,9 @@ class Preprocess:
         # (2) FEATS는 FE가 직접적으로 작동이 되는 부분에서 언급되는것이 좋을것 같다.
         self.FEATS = ['KnowledgeTag', 'user_correct_answer', 'user_total_answer', 
             'user_acc', 'test_mean', 'test_sum', 'tag_mean','tag_sum']
+
+        # TODO catboost는 Categorical columns name을 지정해줘야한다.
+        self.CATS = ['KnowledgeTag']
         
         return df
 
@@ -139,13 +143,11 @@ class Preprocess:
             return lgb_train, lgb_valid, X_valid, y_valid
         
         elif self.args.model == 'catboost':
-            assert print('# TODO; Catboost 알고리즘 자리')
-            cb_train, cb_valid, X_valid, y_valid = self.get_cb_data(train_data, valid_data, self.FEATS)
+            cb_train, cb_valid, X_valid, y_valid = self.get_cb_data(train_data, valid_data, self.FEATS, self.CATS)
             return cb_train, cb_valid, X_valid, y_valid
 
 
     def get_lgb_data(self, train, valid, FEATS):
-
         # X, y 값 분리
         y_train = train['answerCode']
         X_train = train.drop(['answerCode'], axis=1)
@@ -160,5 +162,19 @@ class Preprocess:
 
         return lgb_train, lgb_valid, X_valid, y_valid
 
-    def get_cb_data(self, train, test, FEATS):
-        pass
+    def get_cb_data(self, train, valid, FEATS, cat_cols):
+        y_train = train['answerCode']
+        X_train = train.drop(['answerCode'], axis=1)
+
+        y_valid = valid['answerCode']
+        X_valid = valid.drop(['answerCode'], axis=1)
+
+        cb_train = Pool(data=X_train[FEATS], label=y_train, cat_features=cat_cols)
+        cb_valid = Pool(data=X_valid[FEATS], label=y_valid, cat_features=cat_cols)
+
+        X_valid = X_valid[FEATS]
+
+        return cb_train, cb_valid, X_valid, y_valid
+
+
+  

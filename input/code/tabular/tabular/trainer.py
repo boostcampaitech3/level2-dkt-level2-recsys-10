@@ -5,6 +5,7 @@ import numpy as np
 import torch
 import wandb
 import lightgbm as lgb
+from catboost import CatBoostClassifier
 from wandb.lightgbm import wandb_callback
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import accuracy_score
@@ -23,13 +24,30 @@ def run(args, train_data, valid_data, X_valid, y_valid):
                 lgb.log_evaluation(period = args.verbose_eval)
                 ]
             )
+    elif args.model == 'catboost':
+        model = CatBoostClassifier(
+            iterations=args.num_boost_round,
+            learning_rate=0.001, # TODO lr 관련 파라미터 확인하기
+            task_type='GPU' # TODO GPU 사용 가능할 때만 사용하록 if 문으로 변경
+        )
+        model.fit(
+            train_data, 
+            eval_set=valid_data, 
+            use_best_model=True, 
+            early_stopping_rounds=args.early_stopping_rounds, 
+            verbose=args.verbose_eval)
+
     
-    auc, acc = model_predict(model, X_valid, y_valid)
+    auc, acc = model_predict(args, model, X_valid, y_valid)
     save_model(args, model)
     wandb.log({'valid_auc':auc, 'valid_acc':acc})
 
-def model_predict(model, X_valid, y_valid):
-    preds = model.predict(X_valid)
+def model_predict(args, model, X_valid, y_valid):
+    if args.model == 'lightgbm':
+        preds = model.predict(X_valid)
+    elif args.model == 'catboost':
+        preds = model.predict(X_valid, prediction_type='Probability')[:, 1]
+
     acc = accuracy_score(y_valid, np.where(preds >= 0.5, 1, 0))
     auc = roc_auc_score(y_valid, preds)
 
