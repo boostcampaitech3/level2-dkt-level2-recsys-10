@@ -15,65 +15,17 @@ class Preprocess:
     def __init__(self, args):
         self.args = args
         self.train_data = None
+        self.valid_data = None
         self.test_data = None
 
     def get_train_data(self):
         return self.train_data
 
+    def get_valid_data(self):
+        return self.valid_data    
+
     def get_test_data(self):
         return self.test_data
-
-    def split_data(self, df, ratio=0.7, shuffle=True, seed=0):
-        """
-        split data into two parts with a given ratio.
-        """
-
-        users = list(zip(df['userID'].value_counts().index, df['userID'].value_counts()))
-        
-        if shuffle:
-            random.seed(seed)  # fix to default seed 0
-            random.shuffle(users)
-
-        max_train_data_len = ratio*len(df)
-        sum_of_train_data = 0
-        user_ids = []
-
-        for user_id, count in users:
-            sum_of_train_data += count
-            if max_train_data_len < sum_of_train_data:
-                break
-            user_ids.append(user_id)
-
-
-        train = df[df['userID'].isin(user_ids)]
-        test = df[df['userID'].isin(user_ids) == False]
-
-        #test데이터셋은 각 유저의 마지막 interaction만 추출
-        test = test[test['userID'] != test['userID'].shift(-1)]
-        return train, test
-
-        # size = int(len(data) * ratio)
-        # data_1 = data[:size]
-        # data_2 = data[size:]
-
-        # return data_1, data_2
-
-    # def get_lgb_data(self, train, test):
-    #     # 사용할 Feature 설정
-    #     FEATS = ['KnowledgeTag', 'user_correct_answer', 'user_total_answer', 
-    #             'user_acc', 'test_mean', 'test_sum', 'tag_mean','tag_sum']
-
-    #     # X, y 값 분리
-    #     y_train = train['answerCode']
-    #     train = train.drop(['answerCode'], axis=1)
-
-    #     y_test = test['answerCode']
-    #     test = test.drop(['answerCode'], axis=1)
-
-    #     lgb_train = lgb.Dataset(train[FEATS], y_train)
-    #     lgb_test = lgb.Dataset(test[FEATS], y_test)
-
-    #     return lgb_train, lgb_test, y_test
 
     def __save_labels(self, encoder, name):
         le_path = os.path.join(self.args.asset_dir, name + "_classes.npy")
@@ -114,14 +66,6 @@ class Preprocess:
 
         df["Timestamp"] = df["Timestamp"].apply(convert_time)
 
-        # test에서만 적용되는 전처리
-        if not is_train:
-            # LEAVE LAST INTERACTION ONLY
-            df = df[df['userID'] != df['userID'].shift(-1)]
-
-            # DROP ANSWERCODE
-            df = df.drop(['answerCode'], axis=1)
-
         return df
 
     def __feature_engineering(self, df):
@@ -142,136 +86,79 @@ class Preprocess:
 
         df = pd.merge(df, correct_t, on=['testId'], how="left")
         df = pd.merge(df, correct_k, on=['KnowledgeTag'], how="left")
+
+        # (2) FEATS는 FE가 직접적으로 작동이 되는 부분에서 언급되는것이 좋을것 같다.
+        self.FEATS = ['KnowledgeTag', 'user_correct_answer', 'user_total_answer', 
+            'user_acc', 'test_mean', 'test_sum', 'tag_mean','tag_sum']
         
         return df
 
-    def load_data_from_file(self, file_name, is_train=True):
-        csv_file_path = os.path.join(self.args.data_dir, file_name)
-        df = pd.read_csv(csv_file_path)  # , nrows=100000)
+    def load_data_from_file(self, test_file_name, train_file_name=None, is_train = True):
+        test_csv_file_path = os.path.join(self.args.data_dir, test_file_name)
+        test_df = pd.read_csv(test_csv_file_path)
+        
+        train_csv_file_path = os.path.join(self.args.data_dir, train_file_name)
+        train_df = pd.read_csv(train_csv_file_path)
+        self.train_userID = train_df['userID'].unique().tolist() 
+
+        df = pd.concat([train_df, test_df], axis= 0)
         df = self.__feature_engineering(df)
         df = self.__preprocessing(df, is_train)
+
+        # seperate test and valid data
+        self.test_index = df.answerCode == -1
+        self.valid_index = np.array(self.test_index[1:].tolist() + [False])
+
+        self.args.n_questions = len(
+            np.load(os.path.join(self.args.asset_dir, "assessmentItemID_classes.npy"))
+        )
+        self.args.n_test = len(
+            np.load(os.path.join(self.args.asset_dir, "testId_classes.npy"))
+        )
+        self.args.n_tag = len(
+            np.load(os.path.join(self.args.asset_dir, "KnowledgeTag_classes.npy"))
+        )
         
-
-        # # 추후 feature를 embedding할 시에 embedding_layer의 input 크기를 결정할때 사용
-
-        # self.args.n_questions = len(
-        #     np.load(os.path.join(self.args.asset_dir, "assessmentItemID_classes.npy"))
-        # )
-        # self.args.n_test = len(
-        #     np.load(os.path.join(self.args.asset_dir, "testId_classes.npy"))
-        # )
-        # self.args.n_tag = len(
-        #     np.load(os.path.join(self.args.asset_dir, "KnowledgeTag_classes.npy"))
-        # )
-
-        # df = df.sort_values(by=["userID", "Timestamp"], axis=0)
-        # columns = ["userID", "assessmentItemID", "testId", "answerCode", "KnowledgeTag"]
-        # group = (
-        #     df[columns]
-        #     .groupby("userID")
-        #     .apply(
-        #         lambda r: (
-        #             r["testId"].values,
-        #             r["assessmentItemID"].values,
-        #             r["KnowledgeTag"].values,
-        #             r["answerCode"].values,
-        #         )
-        #     )
-        # )
-
-        # return group.values
-
         return df
 
-    def load_train_data(self, file_name):
-        self.train_data = self.load_data_from_file(file_name)
+    def load_train_data(self, test_file_name, train_file_name):
+        data = self.load_data_from_file(test_file_name, train_file_name)
+        # train data에는 test data의 유저에 대한 정보가 포함되면 안되므로(양심상, 규제는 완화된 것으로 보이기때문에 이 부분은 따로 수정해줄 필요도 있을 것 같다)
+        self.train_data = data.merge(pd.Series(self.train_userID, name='userID'), how = 'inner', on = 'userID')
+        self.valid_data = data[self.valid_index].query("answerCode != -1")
 
-    def load_test_data(self, file_name):
-        self.test_data = self.load_data_from_file(file_name, is_train=False)
-
-
-# class DKTDataset(torch.utils.data.Dataset):
-#     def __init__(self, data, args):
-#         self.data = data
-#         self.args = args
-
-#     def __getitem__(self, index):
-#         row = self.data[index]
-
-#         # 각 data의 sequence length
-#         seq_len = len(row[0])
-
-#         test, question, tag, correct = row[0], row[1], row[2], row[3]
-
-#         cate_cols = [test, question, tag, correct]
-
-#         # max seq len을 고려하여서 이보다 길면 자르고 아닐 경우 그대로 냅둔다
-#         if seq_len > self.args.max_seq_len:
-#             for i, col in enumerate(cate_cols):
-#                 cate_cols[i] = col[-self.args.max_seq_len :]
-#             mask = np.ones(self.args.max_seq_len, dtype=np.int16)
-#         else:
-#             mask = np.zeros(self.args.max_seq_len, dtype=np.int16)
-#             mask[-seq_len:] = 1
-
-#         # mask도 columns 목록에 포함시킴
-#         cate_cols.append(mask)
-
-#         # np.array -> torch.tensor 형변환
-#         for i, col in enumerate(cate_cols):
-#             cate_cols[i] = torch.tensor(col)
-
-#         return cate_cols
-
-#     def __len__(self):
-#         return len(self.data)
+    def load_test_data(self, test_file_name, train_file_name):
+        data = self.load_data_from_file(test_file_name, train_file_name, is_train=False)
+        self.test_data = data[self.test_index]
+        self.test_data.drop('answerCode', axis=1, inplace=True)
 
 
-# from torch.nn.utils.rnn import pad_sequence
+    def convert_dataset(self, train_data, valid_data):
+        if self.args.model == 'lightgbm':
+            lgb_train, lgb_valid, X_valid, y_valid = self.get_lgb_data(train_data, valid_data, self.FEATS)
+            return lgb_train, lgb_valid, X_valid, y_valid
+        
+        elif self.args.model == 'catboost':
+            assert print('# TODO; Catboost 알고리즘 자리')
+            cb_train, cb_valid, X_valid, y_valid = self.get_cb_data(train_data, valid_data, self.FEATS)
+            return cb_train, cb_valid, X_valid, y_valid
 
 
-# def collate(batch):
-#     col_n = len(batch[0])
-#     col_list = [[] for _ in range(col_n)]
-#     max_seq_len = len(batch[0][-1])
+    def get_lgb_data(self, train, valid, FEATS):
 
-#     # batch의 값들을 각 column끼리 그룹화
-#     for row in batch:
-#         for i, col in enumerate(row):
-#             pre_padded = torch.zeros(max_seq_len)
-#             pre_padded[-len(col) :] = col
-#             col_list[i].append(pre_padded)
+        # X, y 값 분리
+        y_train = train['answerCode']
+        X_train = train.drop(['answerCode'], axis=1)
 
-#     for i, _ in enumerate(col_list):
-#         col_list[i] = torch.stack(col_list[i])
+        y_valid = valid['answerCode']
+        X_valid = valid.drop(['answerCode'], axis=1)
 
-#     return tuple(col_list)
+        lgb_train = lgb.Dataset(X_train[FEATS], y_train)
+        lgb_valid = lgb.Dataset(X_valid[FEATS], y_valid)
 
+        X_valid = X_valid[FEATS]
 
-# def get_loaders(args, train, valid):
+        return lgb_train, lgb_valid, X_valid, y_valid
 
-#     pin_memory = False
-#     train_loader, valid_loader = None, None
-
-#     if train is not None:
-#         trainset = DKTDataset(train, args)
-#         train_loader = torch.utils.data.DataLoader(
-#             trainset,
-#             num_workers=args.num_workers,
-#             shuffle=True,
-#             batch_size=args.batch_size,
-#             pin_memory=pin_memory,
-#             collate_fn=collate,
-#         )
-#     if valid is not None:
-#         valset = DKTDataset(valid, args)
-#         valid_loader = torch.utils.data.DataLoader(
-#             valset,
-#             num_workers=args.num_workers,
-#             shuffle=False,
-#             batch_size=args.batch_size,
-#             pin_memory=pin_memory,
-#             collate_fn=collate,
-#         )
-
-#     return train_loader, valid_loader
+    def get_cb_data(train, test, FEATS):
+        pass
