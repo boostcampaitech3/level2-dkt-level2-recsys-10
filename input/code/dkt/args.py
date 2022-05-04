@@ -1,5 +1,13 @@
 import argparse
+from xmlrpc.client import boolean
 
+def str2bool(v):
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 def parse_args(mode="train"):
     parser = argparse.ArgumentParser()
@@ -66,6 +74,8 @@ def parse_args(mode="train"):
     parser.add_argument(
         "--scheduler", default="plateau", type=str, help="scheduler type"
     )
+    parser.add_argument("--sweep", action="store_true", help="sweep type")
+    parser.add_argument("--sweep_count", default=10, type=int, help="sweep count")
 
     args = parser.parse_args()
 
