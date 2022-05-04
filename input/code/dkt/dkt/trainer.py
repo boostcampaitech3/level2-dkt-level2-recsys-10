@@ -6,7 +6,7 @@ import torch
 import wandb
 
 from .criterion import get_criterion
-from .dataloader import get_loaders
+from .dataloader import get_loaders, data_augmentation
 from .metric import get_metric
 from .model import LSTM, LSTMATTN, Bert, Saint, LastQuery
 from .optimizer import get_optimizer
@@ -14,6 +14,13 @@ from .scheduler import get_scheduler
 
 
 def run(args, train_data, valid_data):
+    if args.augmentation:
+        # augmentation
+        augmented_train_data = data_augmentation(train_data, args)
+        if len(augmented_train_data) != len(train_data):
+            print(f"Data Augmentation applied. Train data {len(train_data)} -> {len(augmented_train_data)}\n")
+        train_data = augmented_train_data
+
     train_loader, valid_loader = get_loaders(args, train_data, valid_data)
 
     # only when using warmup scheduler

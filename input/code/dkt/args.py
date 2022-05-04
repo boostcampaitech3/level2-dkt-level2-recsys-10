@@ -41,6 +41,25 @@ def parse_args(mode="train"):
     )
     parser.add_argument("--num_workers", default=1, type=int, help="number of workers")
 
+    # 데이터 증강 (Data Augmentation)
+    parser.add_argument(
+        "--augmentation", action='store_true', help="data augmentation"
+    )
+    parser.add_argument(
+        "--window", action='store_true', help="sliding window"
+    )
+    parser.add_argument(
+        "--shuffle", action='store_true', help="sliding window shuffle"
+    )
+    parser.add_argument(
+        "--shuffle_n", default=2, type=int, help="data augmentation count"
+    )
+
+    # config['window'] = False
+    # config['stride'] = config['max_seq_len']
+    # config['shuffle'] = False
+    # config['shuffle_n'] = 2
+
     # 모델
     parser.add_argument(
         "--hidden_dim", default=1024, type=int, help="hidden dimension size"
@@ -66,7 +85,7 @@ def parse_args(mode="train"):
     parser.add_argument(
         "--scheduler", default="plateau", type=str, help="scheduler type"
     )
-
+    
     args = parser.parse_args()
 
     return args
