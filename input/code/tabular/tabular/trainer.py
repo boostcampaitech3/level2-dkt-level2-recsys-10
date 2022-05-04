@@ -15,10 +15,12 @@ import joblib
 def run(args, train_data, valid_data, X_valid, y_valid):
     if args.model == 'lightgbm':
         model = lgb.train(
-            {'objective': args.objective}, 
+            {'objective': args.objective,
+             'metric' : 'auc'}, 
             train_data,
             valid_sets=[train_data, valid_data],
             num_boost_round=args.num_boost_round,
+            feval =custom_acc,
             callbacks=[
                 wandb_callback(), 
                 lgb.early_stopping(stopping_rounds = args.early_stopping_rounds), 
@@ -46,20 +48,27 @@ def run(args, train_data, valid_data, X_valid, y_valid):
     auc, acc = model_predict(args, model, X_valid, y_valid)
     save_model(args, model)
 
-    if args.model == 'lightgbm':
-        wandb.log({'valid_auc':auc, 'valid_acc':acc})
-    elif args.model == 'catboost':
+    # if args.model == 'lightgbm':
+    #     wandb.log({'valid_auc':auc, 'valid_acc':acc})
+    if args.model == 'catboost':
         eval_result = model.get_evals_result()
         list_run = ['learn', 'validation']
         
         for i in range(0, args.num_boost_round):
             wandb.log({
                 "train_loss" : eval_result[list_run[0]]['Logloss'][i],
-                "train_acc" : eval_result[list_run[0]][custom_loss[1]][i],
-                "valid_auc" : eval_result[list_run[1]][custom_loss[0]][i],
-                "valid_acc" : eval_result[list_run[1]][custom_loss[1]][i],
+                "training_acc" : eval_result[list_run[0]][custom_loss[1]][i],
+                "valid_1_auc" : eval_result[list_run[1]][custom_loss[0]][i],
+                "valid_1_acc" : eval_result[list_run[1]][custom_loss[1]][i],
                 "itration" : i
             })
+
+def custom_acc(y_pred, dataset):
+    # https://lightgbm.readthedocs.io/en/latest/pythonapi/lightgbm.train.html#lightgbm.train
+    y_true = dataset.get_label()
+    y_pred = np.where(y_pred >= 0.5, 1., 0.)
+    
+    return ('acc', np.mean(y_pred==y_true), False)
 
 def model_predict(args, model, X_valid, y_valid):
     if args.model == 'lightgbm':
