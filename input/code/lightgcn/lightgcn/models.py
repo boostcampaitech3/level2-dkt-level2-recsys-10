@@ -24,7 +24,7 @@ def train(
     model,
     train_data,
     valid_data=None,
-    n_epoch=100,
+    n_epochs=100,
     learning_rate=0.01,
     use_wandb=False,
     weight=None,
@@ -49,9 +49,9 @@ def train(
         valid_data = dict(edge=edge, label=label)
 
 
-    logger.info(f"Training Started : n_epoch={n_epoch}")
+    logger.info(f"Training Started : n_epoch={n_epochs}")
     best_auc, best_epoch = 0, -1
-    for e in range(n_epoch):
+    for e in range(n_epochs):
         # forward
         pred = model(train_data["edge"])
         loss = model.link_pred_loss(pred, train_data["label"])

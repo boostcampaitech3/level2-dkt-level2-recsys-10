@@ -26,11 +26,13 @@ class CFG:
 
     # train
     seed = 42
-    n_epoch = 20
+    n_epochs = 1000
     learning_rate = 0.001
-    n_epochs = 20
-    lr = 0.001
     weight_basepath = "./weight"
+
+    # sweep
+    sweep=True
+    sweep_count = 20
 
 
 
@@ -54,4 +56,26 @@ logging_conf = {  # only used when 'user_wandb==False'
         },
     },
     "root": {"level": "INFO", "handlers": ["console", "file_handler"]},
+}
+
+sweep_conf = {
+    'name' : 'lightgcn_test',
+    'method': 'bayes',
+    'metric' : {
+        'name': 'valid_auc',
+        'goal': 'maximize'   
+        },
+    'parameters' : {
+        'learning_rate': {
+            'distribution': 'uniform',
+            'min': 0,
+            'max': 0.1
+        },
+        "n_layers": {
+            "values": [1, 2, 3]
+        },
+        "hidden_dim":{
+            "values": [32, 64, 128, 256, 512]
+        }
+    }
 }
