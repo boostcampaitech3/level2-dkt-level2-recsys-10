@@ -1,14 +1,16 @@
 import pandas as pd
 import torch
-from config import CFG, logging_conf
+from config import CFG, logging_conf, sweep_conf
 from lightgcn.datasets import prepare_dataset
 from lightgcn.models import build, train
 from lightgcn.utils import class2dict, get_logger, setSeeds
 
-if CFG.user_wandb: # True이면
-    import wandb
+import wandb
 
-    wandb.init(**CFG.wandb_kwargs, config=class2dict(CFG))
+# if CFG.user_wandb:
+#     import wandb
+
+#     wandb.init(**CFG.wandb_kwargs, config=class2dict(CFG))
 
 setSeeds(CFG.seed)
 logger = get_logger(logging_conf)
@@ -38,22 +40,45 @@ def main():
     )
     model.to(device)
 
-    if CFG.user_wandb:
-        wandb.watch(model)
+    # if CFG.user_wandb:
+    #     wandb.watch(model)
 
     logger.info("[2/2] Model Building - Done")
 
     logger.info("[3/3] Model Training - Start")
-    train(
-        model,
-        train_data,
-        valid_data,
-        n_epoch=CFG.n_epochs,
-        learning_rate=CFG.lr,
-        use_wandb=CFG.user_wandb,
-        weight=CFG.weight_basepath,
-        logger=logger.getChild("train"),
-    )
+
+    if CFG.sweep:
+        def runner():
+            wandb.init(config=class2dict(CFG))
+            wandb.watch(model)
+            train(
+                model,
+                train_data,
+                valid_data,
+                n_epochs=CFG.n_epochs,
+                learning_rate=CFG.learning_rate,
+                use_wandb=CFG.user_wandb,
+                weight=CFG.weight_basepath,
+                logger=logger.getChild("train"),
+            )
+
+        sweep_id = wandb.sweep(sweep_conf, entity="egsbj", project="lightgcn")
+        wandb.agent(sweep_id, runner, count=CFG.sweep_count)
+
+    else:
+        wandb.init(config=class2dict(CFG), entity="egsbj", project="lightgcn")
+        wandb.watch(model)
+        train(
+            model,
+            train_data,
+            valid_data,
+            n_epochs=CFG.n_epochs,
+            learning_rate=CFG.learning_rate,
+            use_wandb=CFG.user_wandb,
+            weight=CFG.weight_basepath,
+            logger=logger.getChild("train"),
+        )
+
     logger.info("[3/3] Model Training - Done")
 
     logger.info("Task Complete")
