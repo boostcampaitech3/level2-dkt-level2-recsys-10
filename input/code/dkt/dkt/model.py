@@ -48,8 +48,8 @@ class LSTM(nn.Module):
         return (h, c)
 
     def forward(self, input):
-
-        test, question, tag, _, mask, interaction = input
+        # correct 제외
+        test, question, tag, _, mask, interaction = input 
 
         batch_size = interaction.size(0)
 
@@ -69,20 +69,24 @@ class LSTM(nn.Module):
             ],
             2,
         )
-
+        
         X = self.comb_proj(embed)
 
         hidden = self.init_hidden(batch_size)
+        # lstm input = [batch, seq_len, input_size/num of features]
         out, hidden = self.lstm(X, hidden)
+        # lstm output = [batch, seq_len, hidden_dim]
         out = out.contiguous().view(batch_size, -1, self.hidden_dim)
 
         out = self.fc(out)
+        # 모든 seq에서 맨 마지막 seq만
         preds = self.activation(out).view(batch_size, -1)
 
         return preds
 
 
 class LSTMATTN(nn.Module):
+    # LSTM + ATTN
     def __init__(self, args):
         super(LSTMATTN, self).__init__()
         self.args = args
@@ -104,7 +108,7 @@ class LSTMATTN(nn.Module):
 
         # embedding combination projection
         self.comb_proj = nn.Linear((self.hidden_dim // 3) * 4, self.hidden_dim)
-
+        
         self.lstm = nn.LSTM(
             self.hidden_dim, self.hidden_dim, self.n_layers, batch_first=True
         )
@@ -158,17 +162,21 @@ class LSTMATTN(nn.Module):
         )
 
         X = self.comb_proj(embed)
-
+        # LSTM
         hidden = self.init_hidden(batch_size)
         out, hidden = self.lstm(X, hidden)
         out = out.contiguous().view(batch_size, -1, self.hidden_dim)
-
+        
+        # ATTN 
         extended_attention_mask = mask.unsqueeze(1).unsqueeze(2)
         extended_attention_mask = extended_attention_mask.to(dtype=torch.float32)
+        # 마스크가 0인 경우는 학습을 안되게 만듬
         extended_attention_mask = (1.0 - extended_attention_mask) * -10000.0
         head_mask = [None] * self.n_layers
 
         encoded_layers = self.attn(out, extended_attention_mask, head_mask=head_mask)
+        
+        # 맨 마지막 인코더만 사용
         sequence_output = encoded_layers[-1]
 
         out = self.fc(sequence_output)

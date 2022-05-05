@@ -24,7 +24,7 @@ def load_data(basepath):
     path2 = os.path.join(basepath, "test_data.csv")
     data1 = pd.read_csv(path1)
     data2 = pd.read_csv(path2)
-
+    # test set도 학습에 한번에 사용한다
     data = pd.concat([data1, data2])
     data.drop_duplicates(
         subset=["userID", "assessmentItemID"], keep="last", inplace=True
@@ -50,6 +50,7 @@ def indexing_data(data):
     n_user, n_item = len(userid), len(itemid)
 
     userid_2_index = {v: i for i, v in enumerate(userid)}
+    # user_id와 겹치지 않게 item_id 만들기
     itemid_2_index = {v: i + n_user for i, v in enumerate(itemid)}
     id_2_index = dict(userid_2_index, **itemid_2_index)
 
@@ -60,6 +61,7 @@ def process_data(data, id_2_index, device):
     edge, label = [], []
     for user, item, acode in zip(data.userID, data.assessmentItemID, data.answerCode):
         uid, iid = id_2_index[user], id_2_index[item]
+        # user와 item 사이의 edge
         edge.append([uid, iid])
         label.append(acode)
 
