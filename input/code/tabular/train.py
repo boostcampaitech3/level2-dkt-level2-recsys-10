@@ -33,7 +33,7 @@ def main(args):
     if args.sweep:
         def runner():
             wandb.init(config=vars(args))
-            trainer.run(args, train_data, valid_data, X_valid, y_valid)
+            trainer.run(wandb.config, train_data, valid_data, X_valid, y_valid)
 
         sweep_id = wandb.sweep(config.sweep_config, entity="egsbj", project="tabular")
         wandb.agent(sweep_id, runner, count=args.sweep_count)

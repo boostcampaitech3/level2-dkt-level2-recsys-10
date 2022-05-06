@@ -29,10 +29,10 @@ def run(args, train_data, valid_data, X_valid, y_valid):
             )
     elif args.model == 'catboost':
         custom_loss = ["AUC", "Accuracy"]
-
+        
         model = CatBoostClassifier(
             iterations=args.num_boost_round,
-            learning_rate=0.001, # TODO lr 관련 파라미터 확인하기
+            learning_rate=args.learning_rate, # TODO lr 관련 파라미터 확인하기
             task_type='GPU', # TODO GPU 사용 가능할 때만 사용하록 if 문으로 변경
             custom_loss = custom_loss
         )
