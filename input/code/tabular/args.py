@@ -72,6 +72,9 @@ def parse_args(mode="train"):
     parser.add_argument("--num_boost_round", default=500, type=int)
     parser.add_argument("--early_stopping_rounds", default=100, type=int)
 
+    parser.add_argument("--sweep", action="store_true", help="sweep type")
+    parser.add_argument("--sweep_count", default=10, type=int, help="sweep count")
+
     args = parser.parse_args()
 
     return args
