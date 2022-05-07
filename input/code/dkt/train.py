@@ -25,7 +25,8 @@ def main(args):
     if args.sweep:
         def runner():
             wandb.init(config=vars(args))
-            trainer.run(args, train_data, valid_data)
+            w_config = wandb.config
+            trainer.run(w_config, train_data, valid_data)
 
         sweep_id = wandb.sweep(config.sweep_config, entity="egsbj", project="DKT")
         wandb.agent(sweep_id, runner, count=args.sweep_count)

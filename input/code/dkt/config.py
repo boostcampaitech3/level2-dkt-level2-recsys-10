@@ -6,7 +6,7 @@ sweep_config = {
         'goal': 'maximize'   
         },
     'parameters' : {
-        'learning_rate': {
+        'lr': {
             'distribution': 'uniform',
             'min': 0,
             'max': 0.1
