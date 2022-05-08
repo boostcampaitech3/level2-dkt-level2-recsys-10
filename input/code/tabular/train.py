@@ -40,6 +40,7 @@ def main(args):
 
     else:
         wandb.init(config=vars(args), name=args.model, entity="egsbj", project="tabular")
+
         trainer.run(args, train_data, valid_data, X_valid, y_valid)
 
 if __name__ == "__main__":

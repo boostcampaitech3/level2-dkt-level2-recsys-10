@@ -155,12 +155,13 @@ class Preprocess:
         y_valid = valid['answerCode']
         X_valid = valid.drop(['answerCode'], axis=1)
 
-        lgb_train = lgb.Dataset(X_train[FEATS], y_train)
-        lgb_valid = lgb.Dataset(X_valid[FEATS], y_valid)
+        # lgb_train = lgb.Dataset(X_train[FEATS], y_train)
+        # lgb_valid = lgb.Dataset(X_valid[FEATS], y_valid)
 
+        X_train = X_train[FEATS]    
         X_valid = X_valid[FEATS]
 
-        return lgb_train, lgb_valid, X_valid, y_valid
+        return X_train, y_train, X_valid, y_valid
 
     def get_cb_data(self, train, valid, FEATS, cat_cols):
         y_train = train['answerCode']

@@ -67,6 +67,8 @@ def parse_args(mode="train"):
     # )
 
     parser.add_argument("--model", default="lightgbm", type=str, help="model type")
+    parser.add_argument("--learning_rate", default=0.001, type=float, help="model learning_rate")
+
     parser.add_argument("--objective", default='binary', type=str)
     parser.add_argument("--verbose_eval", default=100, type=int)
     parser.add_argument("--num_boost_round", default=500, type=int)
@@ -74,7 +76,6 @@ def parse_args(mode="train"):
 
     parser.add_argument("--sweep", action="store_true", help="sweep type")
     parser.add_argument("--sweep_count", default=10, type=int, help="sweep count")
-
     args = parser.parse_args()
 
     return args
