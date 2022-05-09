@@ -44,12 +44,13 @@ def parse_args(mode="train"):
         "--test_file_name", default="test_data.csv", type=str, help="test file name"
     )
 
-    parser.add_argument(
-        "--max_seq_len", default=20, type=int, help="max sequence length"
-    )
+
     parser.add_argument("--num_workers", default=1, type=int, help="number of workers")
 
     # 모델
+    parser.add_argument(
+        "--max_seq_len", default=20, type=int, help="max sequence length"
+    )
     parser.add_argument(
         "--hidden_dim", default=64, type=int, help="hidden dimension size"
     )
@@ -58,11 +59,11 @@ def parse_args(mode="train"):
     parser.add_argument("--drop_out", default=0.2, type=float, help="drop out rate")
 
     # 훈련
-    parser.add_argument("--n_epochs", default=20, type=int, help="number of epochs")
+    parser.add_argument("--n_epochs", default=150, type=int, help="number of epochs")
     parser.add_argument("--batch_size", default=64, type=int, help="batch size")
     parser.add_argument("--lr", default=0.0001, type=float, help="learning rate")
     parser.add_argument("--clip_grad", default=10, type=int, help="clip grad")
-    parser.add_argument("--patience", default=5, type=int, help="for early stopping")
+    parser.add_argument("--patience", default=10, type=int, help="for early stopping")
 
     parser.add_argument(
         "--log_steps", default=50, type=int, help="print log per n steps"
@@ -74,9 +75,12 @@ def parse_args(mode="train"):
     parser.add_argument(
         "--scheduler", default="plateau", type=str, help="scheduler type"
     )
+    
+    # Sweep 파라미터
     parser.add_argument("--sweep", action="store_true", help="sweep type")
     parser.add_argument("--sweep_count", default=10, type=int, help="sweep count")
+    parser.add_argument("--sweep_name", type=str, default='DKT_LSTM', help='DKT_model-name' )
+    parser.add_argument("--sweep_method", type=str, default='bayes', help='grid, random, bayes' )
 
     args = parser.parse_args()
-
     return args
