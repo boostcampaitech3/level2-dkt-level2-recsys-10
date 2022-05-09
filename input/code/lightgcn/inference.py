@@ -27,8 +27,8 @@ def main():
     logger.info("[2/4] Model Building - Start")
     model = build(
         n_node,
-        embedding_dim=CFG.embedding_dim,
-        num_layers=CFG.num_layers,
+        embedding_dim=CFG.hidden_dim,
+        num_layers=CFG.n_layers,
         alpha=CFG.alpha,
         weight=CFG.weight,
         logger=logger.getChild("build"),
