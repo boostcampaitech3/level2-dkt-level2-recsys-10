@@ -24,7 +24,7 @@ def train(
     model,
     train_data,
     valid_data=None,
-    n_epoch=100,
+    n_epochs=100,
     learning_rate=0.01,
     use_wandb=False,
     weight=None,
@@ -42,6 +42,7 @@ def train(
         eids = np.random.permutation(eids)[:1000]
         edge, label = train_data["edge"], train_data["label"]
         label = label.to("cpu").detach().numpy()
+        # valid는 기존 eids에서 
         valid_data = dict(edge=edge[:, eids], label=label[eids])
     else:
         edge, label = valid_data["edge"], valid_data["label"]
@@ -49,9 +50,9 @@ def train(
         valid_data = dict(edge=edge, label=label)
 
 
-    logger.info(f"Training Started : n_epoch={n_epoch}")
+    logger.info(f"Training Started : n_epoch={n_epochs}")
     best_auc, best_epoch = 0, -1
-    for e in range(n_epoch):
+    for e in range(n_epochs):
         # forward
         pred = model(train_data["edge"])
         loss = model.link_pred_loss(pred, train_data["label"])
@@ -61,7 +62,7 @@ def train(
         loss.backward()
         optimizer.step()
 
-        with torch.no_grad():
+        with torch.no_grad(): # valid
             prob = model.predict_link(valid_data["edge"], prob=True)
             prob = prob.detach().cpu().numpy()
             acc = accuracy_score(valid_data["label"], prob > 0.5)

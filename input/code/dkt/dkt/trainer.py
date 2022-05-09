@@ -58,7 +58,8 @@ def run(args, train_data, valid_data):
                 "valid_acc": acc,
             }
         )
-        if auc > best_auc:
+        
+        if auc > best_auc: # 성능향상이 있을때 저장
             best_auc = auc
             # torch.nn.DataParallel로 감싸진 경우 원래의 model을 가져옵니다.
             model_to_save = model.module if hasattr(model, "module") else model
@@ -105,7 +106,7 @@ def train(train_loader, model, optimizer, scheduler, args):
         preds = preds[:, -1]
         targets = targets[:, -1]
 
-        if args.device == "cuda":
+        if args.device == "cuda": # gpu에 있는것을 cpu로 내리고, numpy로 변환
             preds = preds.to("cpu").detach().numpy()
             targets = targets.to("cpu").detach().numpy()
         else:  # cpu
@@ -228,10 +229,11 @@ def process_batch(batch, args):
     interaction = correct + 1  # 패딩을 위해 correct값에 1을 더해준다.
     interaction = interaction.roll(shifts=1, dims=1)
     interaction_mask = mask.roll(shifts=1, dims=1)
-    interaction_mask[:, 0] = 0
+    interaction_mask[:, 0] = 0 # 맨 처음 mask는 0
+
     interaction = (interaction * interaction_mask).to(torch.int64)
 
-    #  test_id, question_id, tag
+    #  test_id, question_id, tag , 모두 0부터 시작하는걸 1씩 더해주어 유의미한 값으로 만듦
     test = ((test + 1) * mask).to(torch.int64)
     question = ((question + 1) * mask).to(torch.int64)
     tag = ((tag + 1) * mask).to(torch.int64)
@@ -274,6 +276,7 @@ def compute_loss(preds, targets):
 
 def update_params(loss, model, optimizer, scheduler, args):
     loss.backward()
+    # update 정도를 조절
     torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip_grad)
     if args.scheduler == "linear_warmup":
         scheduler.step()

@@ -7,6 +7,7 @@ from tabular import trainer
 from tabular.dataloader import Preprocess
 from tabular.utils import setSeeds
 
+import config
 
 def main(args):
     wandb.login()
@@ -17,19 +18,30 @@ def main(args):
 
     preprocess = Preprocess(args)
 
-    print('load_train_data')
-    preprocess.load_train_data(args.file_name)
-    print('get train data from preprocess class')
+    print('[STEP 1] Load the data') # train, test data 전부 로드
+    preprocess.load_train_data(test_file_name= args.test_file_name, train_file_name= args.file_name)
+
+    print('[STEP 2] Preprocess data and Split data into Train and Valid') # FE 포함하여 데이터 전처리 후 train valid split
     train_data = preprocess.get_train_data()
+    valid_data = preprocess.get_valid_data()
 
-    # train, valid split
-    print('train, valid split')
-    train_data, valid_data = preprocess.split_data(train_data)
+    print("[STEP 3] Convert to data satisfying choosed model's style") # model에 맞는 데이터 스타일로 변경
+    train_data, valid_data, X_valid, y_valid = preprocess.convert_dataset(train_data, valid_data)
+    args.FEATS = preprocess.FEATS
 
-    # wandb.init(project="tabular", config=vars(args))
-    print('train')
-    trainer.run(args, train_data, valid_data)
+    print("[STEP 4] Train the Model")
+    if args.sweep:
+        def runner():
+            wandb.init(config=vars(args))
+            trainer.run(wandb.config, train_data, valid_data, X_valid, y_valid)
 
+        sweep_id = wandb.sweep(config.sweep_config, entity="egsbj", project="tabular")
+        wandb.agent(sweep_id, runner, count=args.sweep_count)
+
+    else:
+        wandb.init(config=vars(args), name=args.model, entity="egsbj", project="tabular")
+
+        trainer.run(args, train_data, valid_data, X_valid, y_valid)
 
 if __name__ == "__main__":
     args = parse_args(mode="train")
