@@ -2,7 +2,7 @@ from args import parse_args
 args = parse_args(mode="train")
 
 sweep_config = {
-    'name' : args.sweep_name,
+    'name' : args.model + ' : ' + args.sweep_name,
     'method': args.sweep_method,
     'metric' : {
         'name': 'valid_auc',

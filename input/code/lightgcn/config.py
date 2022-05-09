@@ -33,7 +33,7 @@ class CFG:
     # sweep
     sweep=True
     sweep_count = 100
-    sweep_name = 'LightGCN'
+    sweep_name = 'test'
 
 
 
@@ -61,7 +61,7 @@ logging_conf = {  # only used when 'user_wandb==False'
 }
 
 sweep_conf = {
-    'name' : CFG.sweep_name,
+    'name' : CFG.model + ' : ' + CFG.sweep_name,
     'method': 'bayes',
     'metric' : {
         'name': 'valid_auc',
