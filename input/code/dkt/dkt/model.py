@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 import copy
 import math
-from .module import PositionalEncoding, Feed_Forward_block
+from .module import PositionalEncoding, Feed_Forward_block, EncoderLayer
 
 try:
     from transformers.modeling_bert import BertConfig, BertEncoder, BertModel
@@ -230,6 +230,58 @@ class Bert(nn.Module):
 
         self.activation = nn.Sigmoid()
 
+        # T-Fixup
+        if self.args.Tfixup:
+
+            # 초기화 (Initialization)
+            self.tfixup_initialization()
+            print("T-Fixupbb Initialization Done")
+
+            # 스케일링 (Scaling)
+            self.tfixup_scaling()
+            print(f"T-Fixup Scaling Done")
+
+    def tfixup_initialization(self):
+        # 우리는 padding idx의 경우 모두 0으로 통일한다
+        padding_idx = 0
+
+        for name, param in self.named_parameters():
+            if re.match(r'^embedding*', name):
+                nn.init.normal_(param, mean=0, std=param.shape[1] ** -0.5)
+                nn.init.constant_(param[padding_idx], 0)
+            elif re.match(r'.*Norm.*', name):
+                continue
+            elif re.match(r'.*weight*', name):
+                # nn.init.xavier_uniform_(param)
+                nn.init.xavier_normal_(param)
+
+
+    def tfixup_scaling(self):
+        temp_state_dict = {}
+
+        # 특정 layer들의 값을 스케일링한다
+        for name, param in self.named_parameters():
+
+            # TODO: 모델 내부의 module 이름이 달라지면 직접 수정해서
+            #       module이 scaling 될 수 있도록 변경해주자
+            # print(name)
+
+            if re.match(r'^embedding*', name):
+                temp_state_dict[name] = (9 * self.args.n_layers) ** (-1 / 4) * param   
+            elif re.match(r'.*Norm.*', name):
+                continue
+            elif re.match(r'encoder.*dense.*weight$|encoder.*attention.output.*weight$', name):
+                temp_state_dict[name] = (0.67 * (self.args.n_layers) ** (-1 / 4)) * param
+            elif re.match(r"encoder.*value.weight$", name):
+                temp_state_dict[name] = (0.67 * (self.args.n_layers) ** (-1 / 4)) * (param * (2**0.5))
+
+        # 나머지 layer는 원래 값 그대로 넣는다
+        for name in self.state_dict():
+            if name not in temp_state_dict:
+                temp_state_dict[name] = self.state_dict()[name]
+                
+        self.load_state_dict(temp_state_dict)
+
     def forward(self, input):
         test, question, tag, _, mask, interaction, _ = input
         batch_size = interaction.size(0)
@@ -434,6 +486,59 @@ class LastQuery(nn.Module):
        
         self.activation = nn.Sigmoid()
 
+    # T-Fixup
+        if self.args.Tfixup:
+
+            # 초기화 (Initialization)
+            self.tfixup_initialization()
+            print("T-Fixup Initialization Done")
+
+            # 스케일링 (Scaling)
+            self.tfixup_scaling()
+            print(f"T-Fixup Scaling Done")
+
+        
+        
+    def tfixup_initialization(self):
+        # 우리는 padding idx의 경우 모두 0으로 통일한다
+        padding_idx = 0
+
+        for name, param in self.named_parameters():
+            if re.match(r'^embedding*', name):
+                nn.init.normal_(param, mean=0, std=param.shape[1] ** -0.5)
+                nn.init.constant_(param[padding_idx], 0)
+            elif re.match(r'.*ln.*|.*bn.*', name):
+                continue
+            elif re.match(r'.*weight*', name):
+                # nn.init.xavier_uniform_(param)
+                nn.init.xavier_normal_(param)
+
+
+    def tfixup_scaling(self):
+        temp_state_dict = {}
+
+        # 특정 layer들의 값을 스케일링한다
+        for name, param in self.named_parameters():
+
+            # TODO: 모델 내부의 module 이름이 달라지면 직접 수정해서
+            #       module이 scaling 될 수 있도록 변경해주자
+            # print(name)
+
+            if re.match(r'^embedding*', name):
+                temp_state_dict[name] = (9 * self.args.n_layers) ** (-1 / 4) * param          
+            elif re.match(r'encoder.*ffn.*weight$|encoder.*attn.out_proj.weight$', name):
+                temp_state_dict[name] = (0.67 * (self.args.n_layers) ** (-1 / 4)) * param
+            elif re.match(r"encoder.*value.weight$", name):
+                temp_state_dict[name] = (0.67 * (self.args.n_layers) ** (-1 / 4)) * (param * (2**0.5))
+
+        # 나머지 layer는 원래 값 그대로 넣는다
+        for name in self.state_dict():
+            if name not in temp_state_dict:
+                temp_state_dict[name] = self.state_dict()[name]
+
+        self.load_state_dict(temp_state_dict)
+
+
     def get_mask(self, seq_len, index, batch_size):
         """
         batchsize * n_head 수만큼 각 mask를 반복하여 증가시킨다
@@ -550,4 +655,124 @@ class LastQuery(nn.Module):
 
         # print(preds)
 
+        return preds
+
+class FixupEncoder(nn.Module):
+    def __init__(self, args):
+        super(FixupEncoder, self).__init__()
+        self.args = args
+        self.device = args.device
+
+        # Defining some parameters
+        self.hidden_dim = self.args.hidden_dim
+        self.n_layers = self.args.n_layers
+
+        # Embedding 
+        # interaction은 현재 correct으로 구성되어있다. correct(1, 2) + padding(0)
+        self.embedding_interaction = nn.Embedding(3, self.hidden_dim//3)
+        self.embedding_test = nn.Embedding(self.args.n_test + 1, self.hidden_dim//3)
+        self.embedding_question = nn.Embedding(self.args.n_questions + 1, self.hidden_dim//3)
+        self.embedding_tag = nn.Embedding(self.args.n_tag + 1, self.hidden_dim//3)
+        self.embedding_position = nn.Embedding(self.args.max_seq_len, self.hidden_dim)
+
+        # embedding combination projection
+        self.comb_proj = nn.Linear((self.hidden_dim//3)*4, self.hidden_dim)
+        
+        # Encoder
+        self.encoders = nn.ModuleList([EncoderLayer(args) for _ in range(self.n_layers)])
+
+        # Fully connected layer
+        self.fc = nn.Linear(self.args.hidden_dim, 1)
+
+        self.activation = nn.Sigmoid()
+
+        # T-Fixup
+        if self.args.Tfixup:
+
+            # 초기화 (Initialization)
+            self.tfixup_initialization()
+            print("T-Fixup Initialization Done")
+
+            # 스케일링 (Scaling)
+            self.tfixup_scaling()
+            print(f"T-Fixup Scaling Done")
+
+    def tfixup_initialization(self):
+        # 우리는 padding idx의 경우 모두 0으로 통일한다
+        padding_idx = 0
+
+        for name, param in self.named_parameters():
+            if re.match(r'^embedding*', name):
+                nn.init.normal_(param, mean=0, std=param.shape[1] ** -0.5)
+                nn.init.constant_(param[padding_idx], 0)
+            elif re.match(r'.*ln.*|.*bn.*', name):
+                continue
+            elif re.match(r'.*weight*', name):
+                # nn.init.xavier_uniform_(param)
+                nn.init.xavier_normal_(param)
+
+
+    def tfixup_scaling(self):
+        temp_state_dict = {}
+
+        # 특정 layer들의 값을 스케일링한다
+        for name, param in self.named_parameters():
+
+            # TODO: 모델 내부의 module 이름이 달라지면 직접 수정해서
+            #       module이 scaling 될 수 있도록 변경해주자
+            # print(name)
+
+            if re.match(r'^embedding*', name):
+                temp_state_dict[name] = (9 * self.args.n_layers) ** (-1 / 4) * param          
+            elif re.match(r'encoder.*ffn.*weight$|encoder.*attn.out_proj.weight$', name):
+                temp_state_dict[name] = (0.67 * (self.args.n_layers) ** (-1 / 4)) * param
+            elif re.match(r"encoder.*value.weight$", name):
+                temp_state_dict[name] = (0.67 * (self.args.n_layers) ** (-1 / 4)) * (param * (2**0.5))
+
+        # 나머지 layer는 원래 값 그대로 넣는다
+        for name in self.state_dict():
+            if name not in temp_state_dict:
+                temp_state_dict[name] = self.state_dict()[name]
+
+        self.load_state_dict(temp_state_dict)
+
+    def mask_2d_to_3d(self, mask, batch_size, seq_len):
+        # padding 부분에 1을 주기 위해 0과 1을 뒤집는다
+        mask = torch.ones_like(mask) - mask
+        
+        mask = mask.repeat(1, seq_len)
+        mask = mask.view(batch_size, -1, seq_len)
+        mask = mask.repeat(1, self.args.n_heads, 1)
+        mask = mask.view(batch_size*self.args.n_heads, -1, seq_len)
+
+        return mask.masked_fill(mask==1, float('-inf'))
+
+    def forward(self, input):
+        test, question, tag, _, mask, interaction, _ = input
+        batch_size = interaction.size(0)
+        seq_len = interaction.size(1)
+
+        # 신나는 embedding
+        embed_interaction = self.embedding_interaction(interaction)
+        embed_test = self.embedding_test(test)
+        embed_question = self.embedding_question(question)
+        embed_tag = self.embedding_tag(tag)
+
+        embed = torch.cat([embed_interaction,
+                           embed_test,
+                           embed_question,
+                           embed_tag,], 2)
+
+        embed = self.comb_proj(embed)
+
+        ### Encoder
+        mask = self.mask_2d_to_3d(mask, batch_size, seq_len).to(self.device)
+        for encoder in self.encoders:
+            embed = encoder(embed, mask)
+
+        ###################### DNN #####################
+        out = embed.contiguous().view(batch_size, -1, self.hidden_dim)
+        out = self.fc(out)
+
+        preds = self.activation(out).view(batch_size, -1)
         return preds

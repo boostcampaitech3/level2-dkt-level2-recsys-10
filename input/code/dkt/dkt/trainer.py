@@ -8,7 +8,7 @@ import wandb
 from .criterion import get_criterion
 from .dataloader import get_loaders, data_augmentation
 from .metric import get_metric
-from .model import LSTM, LSTMATTN, Bert, Saint, LastQuery
+from .model import LSTM, LSTMATTN, Bert, Saint, LastQuery, FixupEncoder
 from .optimizer import get_optimizer
 from .scheduler import get_scheduler
 
@@ -201,16 +201,35 @@ def get_model(args):
     """
     if args.model == "lstm":
         model = LSTM(args)
+
     if args.model == "lstmattn":
         model = LSTMATTN(args)
+
     if args.model == "bert":
+        args.Tfixup = False
         model = Bert(args)
+
+    if args.model == "tfixup_bert":
+        args.Tfixup = True
+        model = Bert(args)
+
     if args.model == 'last_query':
+        args.Tfixup = False
         model = LastQuery(args, post_pad=False)
+
     if args.model == 'last_query_post':
         model = LastQuery(args, post_pad=True)
+
+    if args.model == 'tfixup_last_query':
+        args.Tfixup = True
+        model = LastQuery(args, post_pad=False)
+
     if args.model == 'saint':
         model = Saint(args)
+
+    if args.model == 'tfixup':
+        model = FixupEncoder(args)
+        
     model.to(args.device)
 
     return model
