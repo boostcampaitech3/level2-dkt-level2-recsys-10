@@ -20,7 +20,8 @@ def run(args, train_data, valid_data, X_valid, y_valid):
 
         model = lgb.LGBMClassifier(
         learning_rate = args.learning_rate,
-        n_estimators = args.num_boost_round
+        n_estimators = args.num_boost_round,
+        max_depth = args.max_depth
         )
 
         model.fit(
@@ -40,7 +41,8 @@ def run(args, train_data, valid_data, X_valid, y_valid):
             iterations=args.num_boost_round,
             learning_rate=args.learning_rate, # TODO lr 관련 파라미터 확인하기
             task_type='GPU', # TODO GPU 사용 가능할 때만 사용하록 if 문으로 변경
-            custom_loss = custom_loss
+            custom_loss = custom_loss,
+            max_depth = args.max_depth
         )
         model.fit(
             train_data, 
