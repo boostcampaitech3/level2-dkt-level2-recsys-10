@@ -430,6 +430,28 @@ class LastQuery(nn.Module):
        
         self.activation = nn.Sigmoid()
 
+    def get_mask(self, seq_len, index, batch_size):
+        """
+        batchsize * n_head 수만큼 각 mask를 반복하여 증가시킨다
+        
+        참고로 (batch_size*self.args.n_heads, seq_len, seq_len) 가 아니라
+              (batch_size*self.args.n_heads,       1, seq_len) 로 하는 이유는
+        
+        last query라 output의 seq부분의 사이즈가 1이기 때문이다
+        """
+        # [[1], -> [1, 2, 3]
+        #  [2],
+        #  [3]]
+        index = index.view(-1)
+
+        # last query의 index에 해당하는 upper triangular mask의 row를 사용한다
+        mask = torch.from_numpy(np.triu(np.ones((seq_len, seq_len)), k=1))
+        mask = mask[index]
+
+        # batchsize * n_head 수만큼 각 mask를 반복하여 증가시킨다
+        mask = mask.repeat(1, self.args.n_heads).view(batch_size*self.args.n_heads, -1, seq_len)
+        return mask.masked_fill(mask==1, float('-inf'))
+
     def get_pos(self, seq_len):
         # use sine positional embeddinds
         return torch.arange(seq_len).unsqueeze(0)
@@ -491,10 +513,8 @@ class LastQuery(nn.Module):
             out, _ = self.attn(q, k, v, attn_mask=self.mask)
 
         else:
-            q = self.query(embed).permute(1, 0, 2)
-            
+            # q = self.query(embed).permute(1, 0, 2)
             q = self.query(embed)[:, -1:, :].permute(1, 0, 2)
-            
             k = self.key(embed).permute(1, 0, 2)
             v = self.value(embed).permute(1, 0, 2)
 

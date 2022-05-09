@@ -64,15 +64,23 @@ def parse_args(mode="train"):
     parser.add_argument(
         "--hidden_dim", default=1024, type=int, help="hidden dimension size"
     )
-    parser.add_argument("--n_layers", default=5, type=int, help="number of layers")
+    parser.add_argument("--n_layers", default=2, type=int, help="number of layers")
     parser.add_argument("--n_heads", default=16, type=int, help="number of heads")
-    parser.add_argument("--drop_out", default=0.0, type=float, help="drop out rate")
+    parser.add_argument("--drop_out", default=0.2, type=float, help="drop out rate")
 
+    # T Fixup
+    parser.add_argument(
+        "--Tfixup", action='store_true', help="Tfixup"
+    )
+    parser.add_argument("--layer_norm", action='store_false', help="layer norm")
+
+    config['Tfixup'] = False
+    config['layer_norm'] = True
     # 훈련
     parser.add_argument("--n_epochs", default=20, type=int, help="number of epochs")
     parser.add_argument("--batch_size", default=64, type=int, help="batch size")
     parser.add_argument("--lr", default=0.0001, type=float, help="learning rate")
-    parser.add_argument("--clip_grad", default=0, type=int, help="clip grad")
+    parser.add_argument("--clip_grad", default=10, type=int, help="clip grad")
     parser.add_argument("--patience", default=5, type=int, help="for early stopping")
 
     parser.add_argument(
