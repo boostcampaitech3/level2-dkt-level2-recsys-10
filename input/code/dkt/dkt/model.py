@@ -54,8 +54,7 @@ class LSTM(nn.Module):
 
     def forward(self, input):
 
-        test, question, tag, _, mask, interaction = input
-
+        test, question, tag, _, mask, interaction, _ = input
         batch_size = interaction.size(0)
 
         # Embedding
@@ -141,9 +140,7 @@ class LSTMATTN(nn.Module):
 
     def forward(self, input):
 
-        # test, question, tag, _, mask, interaction, _ = input
-        test, question, tag, _, mask, interaction = input
-
+        test, question, tag, _, mask, interaction, _ = input
         batch_size = interaction.size(0)
 
         # Embedding
@@ -226,8 +223,7 @@ class Bert(nn.Module):
         self.activation = nn.Sigmoid()
 
     def forward(self, input):
-        # test, question, tag, _, mask, interaction, _ = input
-        test, question, tag, _, mask, interaction = input
+        test, question, tag, _, mask, interaction, _ = input
         batch_size = interaction.size(0)
 
         # 신나는 embedding
@@ -316,7 +312,7 @@ class Saint(nn.Module):
         return mask.masked_fill(mask==1, float('-inf'))
 
     def forward(self, input):
-        test, question, tag, _, mask, interaction= input
+        test, question, tag, _, mask, interaction, _ = input
 
         batch_size = interaction.size(0)
         seq_len = interaction.size(1)
@@ -473,7 +469,7 @@ class LastQuery(nn.Module):
 
 
     def forward(self, input):
-        test, question, tag, _, mask, interaction = input
+        test, question, tag, _, mask, interaction, index = input
         batch_size = interaction.size(0)
         seq_len = interaction.size(1)
 

@@ -74,8 +74,8 @@ def parse_args(mode="train"):
     )
     parser.add_argument("--layer_norm", action='store_false', help="layer norm")
 
-    config['Tfixup'] = False
-    config['layer_norm'] = True
+    # config['Tfixup'] = False
+    # config['layer_norm'] = True
     # 훈련
     parser.add_argument("--n_epochs", default=20, type=int, help="number of epochs")
     parser.add_argument("--batch_size", default=64, type=int, help="batch size")

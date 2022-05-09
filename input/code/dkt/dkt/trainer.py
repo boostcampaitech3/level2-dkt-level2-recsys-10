@@ -236,6 +236,11 @@ def process_batch(batch, args):
     question = ((question + 1) * mask).to(torch.int64)
     tag = ((tag + 1) * mask).to(torch.int64)
 
+    # gather index
+    # 마지막 sequence만 사용하기 위한 index
+    gather_index = torch.tensor(np.count_nonzero(mask, axis=1))
+    gather_index = gather_index.view(-1, 1) - 1
+
     # device memory로 이동
 
     test = test.to(args.device)
@@ -246,8 +251,9 @@ def process_batch(batch, args):
     mask = mask.to(args.device)
 
     interaction = interaction.to(args.device)
+    gather_index = gather_index.to(args.device)
 
-    return (test, question, tag, correct, mask, interaction)
+    return (test, question, tag, correct, mask, interaction, gather_index)
 
 
 # loss계산하고 parameter update!
