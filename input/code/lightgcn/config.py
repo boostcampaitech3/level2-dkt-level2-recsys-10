@@ -6,7 +6,7 @@ class CFG:
     model = 'lightgcn' # 추후에 모델 추가시 모델별 메소드 생성해주세요!
     
     use_cuda_if_available = True
-    user_wandb = True
+    user_wandb = False
     wandb_kwargs = dict(project="DKT", entity="egsbj", name = model)
 
     # data
@@ -31,12 +31,14 @@ class CFG:
     weight_basepath = "./weight"
 
     # sweep
-    sweep=False
-    sweep_count = 20
+    sweep=True
+    sweep_count = 100
+    sweep_name = 'LightGCN'
 
 
 
 logging_conf = {  # only used when 'user_wandb==False'
+    
     "version": 1,
     "formatters": {
         "basic": {"format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"}
@@ -59,7 +61,7 @@ logging_conf = {  # only used when 'user_wandb==False'
 }
 
 sweep_conf = {
-    'name' : 'lightgcn_test',
+    'name' : CFG.sweep_name,
     'method': 'bayes',
     'metric' : {
         'name': 'valid_auc',
@@ -75,7 +77,7 @@ sweep_conf = {
             "values": [1, 2, 3]
         },
         "hidden_dim":{
-            "values": [32, 64, 128, 256, 512]
+            "values": [4,8,16,32, 64, 128, 256, 512]
         }
     }
 }
