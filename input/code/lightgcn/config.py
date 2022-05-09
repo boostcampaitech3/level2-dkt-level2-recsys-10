@@ -76,8 +76,15 @@ sweep_conf = {
         "n_layers": {
             "values": [1, 2, 3]
         },
-        "hidden_dim":{
-            "values": [4,8,16,32, 64, 128, 256, 512]
-        }
+        'n_layers': {
+            'distribution': 'int_uniform',
+            'min': 1,
+            'max': 4
+        },
+        'hidden_dim': {
+            'distribution': 'int_uniform',
+            'min': 2,
+            'max': 128
+        },
     }
 }
