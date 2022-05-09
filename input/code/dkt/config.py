@@ -1,4 +1,3 @@
-from optparse import Values
 from args import parse_args
 args = parse_args(mode="train")
 
@@ -27,21 +26,26 @@ sweep_config = {
         },
 
         # 모델 파라미터
-        'max_seq_len' : {
-            'values' : [5,10,20,30,50,100]
-        },
+        'max_seq_len':{
+            'distribution': 'int_uniform',
+            'min': 5,
+            'max': 300
+            },
         'hidden_dim' : {
             'values': [8, 16 ,32, 64] # hidden_size는 h_heads의 배수여야함
-        },
-        'n_layers':{
-            'values': [1,2,3,4,5]
         },
         'n_heads':{  
             'values': [1,2,4,8]  # Multi-Head-Attention 모델에만 적용 
         },
-        'drop_out':{
-            'values': [0.1, 0.2, 0.5, 0.7]
-        },
-
+        'n_layers': {
+            'distribution': 'int_uniform',
+            'min': 1,
+            'max': 10
+            },
+        'drop_out': {
+            'distribution': 'uniform',
+            'min': 0.1,
+            'max': 0.9
+            },
     }
 }
