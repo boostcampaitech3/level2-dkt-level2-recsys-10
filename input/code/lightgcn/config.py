@@ -73,9 +73,6 @@ sweep_conf = {
             'min': 0,
             'max': 0.1
         },
-        "n_layers": {
-            "values": [1, 2, 3]
-        },
         'n_layers': {
             'distribution': 'int_uniform',
             'min': 1,
