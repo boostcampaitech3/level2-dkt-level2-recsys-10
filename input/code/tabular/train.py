@@ -7,6 +7,7 @@ from tabular import trainer
 from tabular.dataloader import Preprocess
 from tabular.utils import setSeeds
 
+import config
 
 def main(args):
     wandb.login()
@@ -29,8 +30,18 @@ def main(args):
     args.FEATS = preprocess.FEATS
 
     print("[STEP 4] Train the Model")
-    wandb.init(project="tabular", entity="egsbj", config=vars(args), name=f"{args.model}")
-    trainer.run(args, train_data, valid_data, X_valid, y_valid)
+    if args.sweep:
+        def runner():
+            wandb.init(config=vars(args))
+            trainer.run(wandb.config, train_data, valid_data, X_valid, y_valid)
+
+        sweep_id = wandb.sweep(config.sweep_config, entity="egsbj", project="tabular")
+        wandb.agent(sweep_id, runner, count=args.sweep_count)
+
+    else:
+        wandb.init(config=vars(args), name=args.model, entity="egsbj", project="tabular")
+
+        trainer.run(args, train_data, valid_data, X_valid, y_valid)
 
 if __name__ == "__main__":
     args = parse_args(mode="train")

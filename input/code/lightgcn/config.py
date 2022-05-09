@@ -31,7 +31,7 @@ class CFG:
     weight_basepath = "./weight"
 
     # sweep
-    sweep=True
+    sweep=False
     sweep_count = 20
 
 

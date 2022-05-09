@@ -3,7 +3,6 @@ import math
 import os
 
 import numpy as np
-import torch
 import wandb
 import lightgbm as lgb
 from catboost import CatBoostClassifier
@@ -14,25 +13,32 @@ import joblib
 
 def run(args, train_data, valid_data, X_valid, y_valid):
     if args.model == 'lightgbm':
-        model = lgb.train(
-            {'objective': args.objective,
-             'metric' : 'auc'}, 
-            train_data,
-            valid_sets=[train_data, valid_data],
-            num_boost_round=args.num_boost_round,
-            feval =custom_acc,
-            callbacks=[
-                wandb_callback(), 
-                lgb.early_stopping(stopping_rounds = args.early_stopping_rounds), 
-                lgb.log_evaluation(period = args.verbose_eval)
-                ]
-            )
+        custom_loss = ["auc", lgb_acc]
+        # data 이름 변경
+        X_train = train_data
+        y_train = valid_data
+
+        model = lgb.LGBMClassifier(
+        learning_rate = args.learning_rate,
+        n_estimators = args.num_boost_round
+        )
+
+        model.fit(
+            X = X_train[args.FEATS], 
+            y = y_train,
+            eval_set = [(X_train[args.FEATS],y_train),(X_valid[args.FEATS],y_valid)],
+            eval_names=['train','validation'],
+            eval_metric = custom_loss,
+            verbose=args.verbose_eval,
+            early_stopping_rounds=args.early_stopping_rounds
+        )
+
     elif args.model == 'catboost':
         custom_loss = ["AUC", "Accuracy"]
 
         model = CatBoostClassifier(
             iterations=args.num_boost_round,
-            learning_rate=0.001, # TODO lr 관련 파라미터 확인하기
+            learning_rate=args.learning_rate, # TODO lr 관련 파라미터 확인하기
             task_type='GPU', # TODO GPU 사용 가능할 때만 사용하록 if 문으로 변경
             custom_loss = custom_loss
         )
@@ -45,24 +51,43 @@ def run(args, train_data, valid_data, X_valid, y_valid):
             verbose=args.verbose_eval)
 
     
-    auc, acc = model_predict(args, model, X_valid, y_valid)
-    save_model(args, model)
+    # auc, acc = model_predict(args, model, X_valid, y_valid)
+    # save_model(args, model)
 
-    # if args.model == 'lightgbm':
-    #     wandb.log({'valid_auc':auc, 'valid_acc':acc})
-    if args.model == 'catboost':
+    if args.model == 'lightgbm':
+        eval_result = model.evals_result_
+        list_run = ['train', 'validation']
+        custom_loss = ["auc", "acc"]
+
+        loop_len = len(eval_result["validation"]["auc"])
+        for i in range(0, loop_len):
+            wandb.log({
+                "train_loss" : eval_result[list_run[0]]['binary_logloss'][i],
+                "train_auc" : eval_result[list_run[0]][custom_loss[0]][i],
+                "train_acc" : eval_result[list_run[0]][custom_loss[1]][i],
+                "validation_auc" : eval_result[list_run[1]][custom_loss[0]][i],
+                "validation_acc" : eval_result[list_run[1]][custom_loss[1]][i],
+                "itration" : i
+            })   
+
+    elif args.model == 'catboost':
         eval_result = model.get_evals_result()
         list_run = ['learn', 'validation']
-        
-        for i in range(0, args.num_boost_round):
+        loop_len = len(eval_result["validation"]["AUC"])
+
+        for i in range(0, loop_len):
             wandb.log({
                 "train_loss" : eval_result[list_run[0]]['Logloss'][i],
-                "training_acc" : eval_result[list_run[0]][custom_loss[1]][i],
-                "valid_1_auc" : eval_result[list_run[1]][custom_loss[0]][i],
-                "valid_1_acc" : eval_result[list_run[1]][custom_loss[1]][i],
+                "train_acc" : eval_result[list_run[0]][custom_loss[1]][i],
+                "validation_auc" : eval_result[list_run[1]][custom_loss[0]][i],
+                "validation_acc" : eval_result[list_run[1]][custom_loss[1]][i],
                 "itration" : i
             })
 
+def lgb_acc(y_true, y_pred):
+    y_pred = np.where(y_pred >= 0.5, 1., 0.)   
+    return ('acc', np.mean(y_pred==y_true), False)
+    
 def custom_acc(y_pred, dataset):
     # https://lightgbm.readthedocs.io/en/latest/pythonapi/lightgbm.train.html#lightgbm.train
     y_true = dataset.get_label()
