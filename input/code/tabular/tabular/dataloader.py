@@ -38,26 +38,26 @@ class Preprocess:
         if not os.path.exists(self.args.asset_dir):
             os.makedirs(self.args.asset_dir)
 
-        for col in cate_cols:
+        # for col in cate_cols:
 
-            le = LabelEncoder()
-            if is_train:
-                # For UNKNOWN class
-                a = df[col].unique().tolist() + ["unknown"]
-                le.fit(a)
-                self.__save_labels(le, col)
-            else:
-                label_path = os.path.join(self.args.asset_dir, col + "_classes.npy")
-                le.classes_ = np.load(label_path)
+        #     le = LabelEncoder()
+        #     if is_train:
+        #         # For UNKNOWN class
+        #         a = df[col].unique().tolist() + ["unknown"]
+        #         le.fit(a)
+        #         self.__save_labels(le, col)
+        #     else:
+        #         label_path = os.path.join(self.args.asset_dir, col + "_classes.npy")
+        #         le.classes_ = np.load(label_path)
 
-                df[col] = df[col].apply(
-                    lambda x: x if str(x) in le.classes_ else "unknown"
-                )
+        #         df[col] = df[col].apply(
+        #             lambda x: x if str(x) in le.classes_ else "unknown"
+        #         )
 
-            # 모든 컬럼이 범주형이라고 가정
-            df[col] = df[col].astype(str)
-            test = le.transform(df[col])
-            df[col] = test
+        #     # 모든 컬럼이 범주형이라고 가정
+        #     df[col] = df[col].astype(str)
+        #     test = le.transform(df[col])
+        #     df[col] = test
 
         # def convert_time(s):
         #     timestamp = time.mktime(
@@ -74,6 +74,7 @@ class Preprocess:
         # df.sort_values(by=['userID','Timestamp'], inplace=True)
         df = df.sort_values(by=['userID', 'Timestamp']).reset_index(drop=True)
         
+        ####################################
         # F.E1 : 문제 푸는 시간
         diff = df.loc[:, ['userID', 'Timestamp']].groupby('userID').diff().fillna(pd.Timedelta(seconds=0))
         diff = diff.fillna(pd.Timedelta(seconds=0))
@@ -91,7 +92,17 @@ class Preprocess:
                 return x
 
         df['elapsed'] = df['elapsed'].apply(normalize_outlier)
-        
+        ####################################
+
+        ####################################
+        # FE.2 시험지 대분류 (A000 쪼개서) 별 정답률 구하기
+        df['main_ca'] = df['testId'].str[:4]
+
+        df['main_ca_correct_answer'] = df.groupby('main_ca')['answerCode'].transform(lambda x: x.cumsum().shift(1))
+        df['main_ca_total_answer'] = df.groupby('main_ca')['answerCode'].cumcount()
+        df['main_ca_acc'] = df['main_ca_correct_answer']/df['main_ca_total_answer']
+        ####################################
+
         #유저들의 문제 풀이수, 정답 수, 정답률을 시간순으로 누적해서 계산
         df['user_correct_answer'] = df.groupby('userID')['answerCode'].transform(lambda x: x.cumsum().shift(1))
         df['user_total_answer'] = df.groupby('userID')['answerCode'].cumcount()
@@ -109,11 +120,15 @@ class Preprocess:
 
         # (2) FEATS는 FE가 직접적으로 작동이 되는 부분에서 언급되는것이 좋을것 같다.
         self.FEATS = ['KnowledgeTag', 'user_correct_answer', 'user_total_answer', 
-            'user_acc', 'test_mean', 'test_sum', 'tag_mean','tag_sum','elapsed']
+            'user_acc', 'test_mean', 'test_sum', 'tag_mean','tag_sum',
+            'elapsed','main_ca_correct_answer','main_ca_total_answer','main_ca_acc']
 
         # TODO catboost는 Categorical columns name을 지정해줘야한다.
         #self.CATS = ['KnowledgeTag']
         self.CATS = []
+
+        df.sort_values(by=['userID','Timestamp'], inplace=True)
+
         return df
 
     def load_data_from_file(self, test_file_name, train_file_name=None, is_train = True):

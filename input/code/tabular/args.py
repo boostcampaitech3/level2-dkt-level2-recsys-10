@@ -38,12 +38,12 @@ def parse_args(mode="train"):
 
     # 모델 파라미터
     parser.add_argument("--model", default="lightgbm", type=str, help="model type")
-    parser.add_argument("--learning_rate", default=0.001, type=float, help="model learning_rate")
+    parser.add_argument("--learning_rate", default=0.01, type=float, help="model learning_rate")
 
     parser.add_argument("--objective", default='binary', type=str)
     parser.add_argument("--verbose_eval", default=100, type=int)
     parser.add_argument("--num_boost_round", default=500, type=int)
-    parser.add_argument("--early_stopping_rounds", default=100, type=int)
+    parser.add_argument("--early_stopping_rounds", default=200, type=int)
     parser.add_argument("--max_depth", default=-1, type=int)
 
     # Sweep 파라미터

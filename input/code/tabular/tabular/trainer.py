@@ -20,7 +20,7 @@ def run(args, train_data, valid_data, X_valid, y_valid):
 
         model = lgb.LGBMClassifier(
         learning_rate = args.learning_rate,
-        n_estimators = args.num_boost_round,
+        iterations = args.num_boost_round,
         max_depth = args.max_depth
         )
 
@@ -54,7 +54,7 @@ def run(args, train_data, valid_data, X_valid, y_valid):
 
     
     # auc, acc = model_predict(args, model, X_valid, y_valid)
-    # save_model(args, model)
+    save_model(args, model)
 
     if args.model == 'lightgbm':
         eval_result = model.evals_result_
@@ -111,7 +111,9 @@ def model_predict(args, model, X_valid, y_valid):
 
 def inference(args, test_data):    
     model = load_model(args)
-    total_preds = model.predict(test_data)
+    # total_preds = model.predict(test_data)
+    total_preds = model.predict_proba(test_data)[:,1]
+
 
     write_path = os.path.join(args.output_dir, "submission.csv")
     if not os.path.exists(args.output_dir):
