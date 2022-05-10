@@ -74,8 +74,8 @@ class Preprocess:
         # df.sort_values(by=['userID','Timestamp'], inplace=True)
         df = df.sort_values(by=['userID', 'Timestamp']).reset_index(drop=True)
         
-        ####################################
-        # F.E1 : 문제 푸는 시간
+        #################################### 0.03
+        # F.E1 : 문제 푸는 시간 
         diff = df.loc[:, ['userID', 'Timestamp']].groupby('userID').diff().fillna(pd.Timedelta(seconds=0))
         diff = diff.fillna(pd.Timedelta(seconds=0))
         diff = diff['Timestamp'].apply(lambda x: x.total_seconds())
@@ -94,8 +94,8 @@ class Preprocess:
         df['elapsed'] = df['elapsed'].apply(normalize_outlier)
         ####################################
 
-        ####################################
-        # FE.2 시험지 대분류 (A000 쪼개서) 별 정답률 구하기
+        #################################### 0.003
+        # FE.2 시험지 대분류 (A000 쪼개서) 별 정답률 구하기 
         df['main_ca'] = df['testId'].str[:4]
 
         df['main_ca_correct_answer'] = df.groupby('main_ca')['answerCode'].transform(lambda x: x.cumsum().shift(1))
@@ -103,6 +103,8 @@ class Preprocess:
         df['main_ca_acc'] = df['main_ca_correct_answer']/df['main_ca_total_answer']
         ####################################
 
+        ####################################
+        # base FE
         #유저들의 문제 풀이수, 정답 수, 정답률을 시간순으로 누적해서 계산
         df['user_correct_answer'] = df.groupby('userID')['answerCode'].transform(lambda x: x.cumsum().shift(1))
         df['user_total_answer'] = df.groupby('userID')['answerCode'].cumcount()
@@ -117,7 +119,9 @@ class Preprocess:
 
         df = pd.merge(df, correct_t, on=['testId'], how="left")
         df = pd.merge(df, correct_k, on=['KnowledgeTag'], how="left")
+        ####################################
 
+    
         # (2) FEATS는 FE가 직접적으로 작동이 되는 부분에서 언급되는것이 좋을것 같다.
         self.FEATS = ['KnowledgeTag', 'user_correct_answer', 'user_total_answer', 
             'user_acc', 'test_mean', 'test_sum', 'tag_mean','tag_sum',
