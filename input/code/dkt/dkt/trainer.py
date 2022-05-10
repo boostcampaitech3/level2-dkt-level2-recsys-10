@@ -6,14 +6,21 @@ import torch
 import wandb
 
 from .criterion import get_criterion
-from .dataloader import get_loaders
+from .dataloader import get_loaders, data_augmentation
 from .metric import get_metric
-from .model import LSTM, LSTMATTN, Bert
+from .model import LSTM, LSTMATTN, Bert, Saint, LastQuery, FixupEncoder
 from .optimizer import get_optimizer
 from .scheduler import get_scheduler
 
 
 def run(args, train_data, valid_data):
+    if args.augmentation:
+        # augmentation
+        augmented_train_data = data_augmentation(train_data, args)
+        if len(augmented_train_data) != len(train_data):
+            print(f"Data Augmentation applied. Train data {len(train_data)} -> {len(augmented_train_data)}\n")
+        train_data = augmented_train_data
+
     train_loader, valid_loader = get_loaders(args, train_data, valid_data)
 
     # only when using warmup scheduler
@@ -62,7 +69,7 @@ def run(args, train_data, valid_data):
                     "state_dict": model_to_save.state_dict(),
                 },
                 args.model_dir,
-                "model.pt",
+                f"{args.model}.pt",
             )
             early_stopping_counter = 0
         else:
@@ -194,11 +201,35 @@ def get_model(args):
     """
     if args.model == "lstm":
         model = LSTM(args)
+
     if args.model == "lstmattn":
         model = LSTMATTN(args)
+
     if args.model == "bert":
+        args.Tfixup = False
         model = Bert(args)
 
+    if args.model == "tfixup_bert":
+        args.Tfixup = True
+        model = Bert(args)
+
+    if args.model == 'last_query':
+        args.Tfixup = False
+        model = LastQuery(args, post_pad=False)
+
+    if args.model == 'last_query_post':
+        model = LastQuery(args, post_pad=True)
+
+    if args.model == 'tfixup_last_query':
+        args.Tfixup = True
+        model = LastQuery(args, post_pad=False)
+
+    if args.model == 'saint':
+        model = Saint(args)
+
+    if args.model == 'tfixup':
+        model = FixupEncoder(args)
+        
     model.to(args.device)
 
     return model
@@ -226,6 +257,11 @@ def process_batch(batch, args):
     question = ((question + 1) * mask).to(torch.int64)
     tag = ((tag + 1) * mask).to(torch.int64)
 
+    # gather index
+    # 마지막 sequence만 사용하기 위한 index
+    gather_index = torch.tensor(np.count_nonzero(mask, axis=1))
+    gather_index = gather_index.view(-1, 1) - 1
+
     # device memory로 이동
 
     test = test.to(args.device)
@@ -236,8 +272,9 @@ def process_batch(batch, args):
     mask = mask.to(args.device)
 
     interaction = interaction.to(args.device)
+    gather_index = gather_index.to(args.device)
 
-    return (test, question, tag, correct, mask, interaction)
+    return (test, question, tag, correct, mask, interaction, gather_index)
 
 
 # loss계산하고 parameter update!
@@ -275,7 +312,7 @@ def save_checkpoint(state, model_dir, model_filename):
 
 def load_model(args):
 
-    model_path = os.path.join(args.model_dir, args.model_name)
+    model_path = os.path.join(args.model_dir, f"{args.model}.pt")
     print("Loading Model from:", model_path)
     load_state = torch.load(model_path)
     model = get_model(args)
