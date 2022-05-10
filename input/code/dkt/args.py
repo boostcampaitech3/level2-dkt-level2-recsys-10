@@ -74,6 +74,7 @@ def parse_args(mode="train"):
     parser.add_argument("--n_layers", default=2, type=int, help="number of layers")
     parser.add_argument("--n_heads", default=16, type=int, help="number of heads")
     parser.add_argument("--drop_out", default=0.2, type=float, help="drop out rate")
+    parser.add_argument('--dim_div', default=3, type=int, help='model dimension control')
 
     # T Fixup
     parser.add_argument(
