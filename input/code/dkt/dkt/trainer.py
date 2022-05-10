@@ -4,6 +4,7 @@ import os
 import numpy as np
 import torch
 import wandb
+import json
 
 from .criterion import get_criterion
 from .dataloader import get_loaders, data_augmentation
@@ -30,7 +31,7 @@ def run(args, train_data, valid_data):
     args.warmup_steps = args.total_steps // 10
 
     print(args)
-    model_dir = os.path.join(args.model_dir, args.model_name)
+    model_dir = os.path.join(args.model_dir, args.model)
     os.makedirs(model_dir, exist_ok=True)
     json.dump(
         vars(args),

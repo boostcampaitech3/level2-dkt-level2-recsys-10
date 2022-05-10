@@ -120,7 +120,7 @@ class Preprocess:
             df[columns]
             .groupby("userID")
             .apply(
-                df_group_value_apply
+                self.df_group_value_apply
             )
         )
 
