@@ -59,19 +59,38 @@ class Preprocess:
             test = le.transform(df[col])
             df[col] = test
 
-        def convert_time(s):
-            timestamp = time.mktime(
-                datetime.strptime(s, "%Y-%m-%d %H:%M:%S").timetuple()
-            )
-            return int(timestamp)
+        # def convert_time(s):
+        #     timestamp = time.mktime(
+        #         datetime.strptime(s, "%Y-%m-%d %H:%M:%S").timetuple()
+        #     )
+        #     return int(timestamp)
 
-        df["Timestamp"] = df["Timestamp"].apply(convert_time)
+        # df["Timestamp"] = df["Timestamp"].apply(convert_time)
 
         return df
 
     def __feature_engineering(self, df):
         #유저별 시퀀스를 고려하기 위해 아래와 같이 정렬
-        df.sort_values(by=['userID','Timestamp'], inplace=True)
+        # df.sort_values(by=['userID','Timestamp'], inplace=True)
+        df = df.sort_values(by=['userID', 'Timestamp']).reset_index(drop=True)
+        
+        # F.E1 : 문제 푸는 시간
+        diff = df.loc[:, ['userID', 'Timestamp']].groupby('userID').diff().fillna(pd.Timedelta(seconds=0))
+        diff = diff.fillna(pd.Timedelta(seconds=0))
+        diff = diff['Timestamp'].apply(lambda x: x.total_seconds())
+        df['elapsed'] = diff
+
+        normal_elapsed=df[(df['elapsed']!=0) & (df['elapsed']<600)]['elapsed']
+        normal_mean = normal_elapsed.mean()
+        normal_var = normal_elapsed.std()
+
+        def normalize_outlier(x):
+            if x>660:
+                return x #np.random.choice(normal_elapsed)
+            else:
+                return x
+
+        df['elapsed'] = df['elapsed'].apply(normalize_outlier)
         
         #유저들의 문제 풀이수, 정답 수, 정답률을 시간순으로 누적해서 계산
         df['user_correct_answer'] = df.groupby('userID')['answerCode'].transform(lambda x: x.cumsum().shift(1))
@@ -90,7 +109,7 @@ class Preprocess:
 
         # (2) FEATS는 FE가 직접적으로 작동이 되는 부분에서 언급되는것이 좋을것 같다.
         self.FEATS = ['KnowledgeTag', 'user_correct_answer', 'user_total_answer', 
-            'user_acc', 'test_mean', 'test_sum', 'tag_mean','tag_sum']
+            'user_acc', 'test_mean', 'test_sum', 'tag_mean','tag_sum','elapsed']
 
         # TODO catboost는 Categorical columns name을 지정해줘야한다.
         #self.CATS = ['KnowledgeTag']
@@ -98,11 +117,16 @@ class Preprocess:
         return df
 
     def load_data_from_file(self, test_file_name, train_file_name=None, is_train = True):
+        dtype = {
+            'userID': 'int16',
+            'answerCode': 'int8',
+            'KnowledgeTag': 'int16'
+            }          
         test_csv_file_path = os.path.join(self.args.data_dir, test_file_name)
-        test_df = pd.read_csv(test_csv_file_path)
+        test_df = pd.read_csv(test_csv_file_path,dtype=dtype, parse_dates=['Timestamp'])
         
         train_csv_file_path = os.path.join(self.args.data_dir, train_file_name)
-        train_df = pd.read_csv(train_csv_file_path)
+        train_df = pd.read_csv(train_csv_file_path,dtype=dtype, parse_dates=['Timestamp'])
         self.train_userID = train_df['userID'].unique().tolist() 
 
         df = pd.concat([train_df, test_df], axis= 0)
