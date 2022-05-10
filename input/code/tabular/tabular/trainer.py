@@ -19,20 +19,28 @@ def run(args, train_data, valid_data, X_valid, y_valid):
         y_train = valid_data
 
         model = lgb.LGBMClassifier(
-        learning_rate = args.learning_rate,
-        n_estimators = args.num_boost_round,
-        max_depth = args.max_depth
+            objective = 'binary',
+            learning_rate = args.learning_rate,
+            n_estimators = args.num_boost_round,
+            max_depth = args.max_depth
         )
 
         model.fit(
-            X = X_train[args.FEATS], 
+            X = X_train, 
             y = y_train,
-            eval_set = [(X_train[args.FEATS],y_train),(X_valid[args.FEATS],y_valid)],
+            eval_set = [(X_train,y_train),(X_valid,y_valid)],
             eval_names=['train','validation'],
             eval_metric = custom_loss,
             verbose=args.verbose_eval,
             early_stopping_rounds=args.early_stopping_rounds
         )
+
+        # checking Output
+        # preds = model.predict_proba(X_valid)[:,1]
+        # print(preds[:100])
+        # acc = accuracy_score(y_valid, np.where(preds >= 0.5, 1, 0))
+        # auc = roc_auc_score(y_valid, preds)
+        # print(f'VALID AUC : {auc} ACC : {acc}\n')
 
     elif args.model == 'catboost':
         custom_loss = ["AUC", "Accuracy"]
@@ -60,8 +68,8 @@ def run(args, train_data, valid_data, X_valid, y_valid):
         eval_result = model.evals_result_
         list_run = ['train', 'validation']
         custom_loss = ["auc", "acc"]
-
         loop_len = len(eval_result["validation"]["auc"])
+
         for i in range(0, loop_len):
             wandb.log({
                 "train_loss" : eval_result[list_run[0]]['binary_logloss'][i],
@@ -90,12 +98,12 @@ def lgb_acc(y_true, y_pred):
     y_pred = np.where(y_pred >= 0.5, 1., 0.)   
     return ('acc', np.mean(y_pred==y_true), False)
     
-def custom_acc(y_pred, dataset):
-    # https://lightgbm.readthedocs.io/en/latest/pythonapi/lightgbm.train.html#lightgbm.train
-    y_true = dataset.get_label()
-    y_pred = np.where(y_pred >= 0.5, 1., 0.)
+# def custom_acc(y_pred, dataset):
+#     # https://lightgbm.readthedocs.io/en/latest/pythonapi/lightgbm.train.html#lightgbm.train
+#     y_true = dataset.get_label()
+#     y_pred = np.where(y_pred >= 0.5, 1., 0.)
     
-    return ('acc', np.mean(y_pred==y_true), False)
+#     return ('acc', np.mean(y_pred==y_true), False)
 
 def model_predict(args, model, X_valid, y_valid):
     if args.model == 'lightgbm':
@@ -111,8 +119,7 @@ def model_predict(args, model, X_valid, y_valid):
 
 def inference(args, test_data):    
     model = load_model(args)
-    total_preds = model.predict(test_data)
-
+    total_preds = model.predict_proba(test_data)[:,1]
     write_path = os.path.join(args.output_dir, "submission.csv")
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
