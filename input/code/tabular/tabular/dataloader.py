@@ -38,26 +38,24 @@ class Preprocess:
         if not os.path.exists(self.args.asset_dir):
             os.makedirs(self.args.asset_dir)
 
-        # for col in cate_cols:
+        for col in cate_cols:
 
-        #     le = LabelEncoder()
-        #     if is_train:
-        #         # For UNKNOWN class
-        #         a = df[col].unique().tolist() + ["unknown"]
-        #         le.fit(a)
-        #         self.__save_labels(le, col)
-        #     else:
-        #         label_path = os.path.join(self.args.asset_dir, col + "_classes.npy")
-        #         le.classes_ = np.load(label_path)
+            le = LabelEncoder()
+            if is_train:
+                # For UNKNOWN class
+                a = df[col].unique().tolist() + ["unknown"]
+                le.fit(a)
+                self.__save_labels(le, col)
+            else:
+                label_path = os.path.join(self.args.asset_dir, col + "_classes.npy")
+                le.classes_ = np.load(label_path)
 
-        #         df[col] = df[col].apply(
-        #             lambda x: x if str(x) in le.classes_ else "unknown"
-        #         )
+                df[col] = np.where(df[col].isin(le.classes_), df[col], "unknown")
 
-        #     # 모든 컬럼이 범주형이라고 가정
-        #     df[col] = df[col].astype(str)
-        #     test = le.transform(df[col])
-        #     df[col] = test
+            # 모든 컬럼이 범주형이라고 가정
+            df[col] = df[col].astype(str)
+            test = le.transform(df[col])
+            df[col] = test
 
         # def convert_time(s):
         #     timestamp = time.mktime(
@@ -119,6 +117,14 @@ class Preprocess:
         ####################################
 
         ####################################
+        ## FE. 5 : 문항별(accessmentItemID) 정답률
+        correct_a = df.groupby(['assessmentItemID'])['answerCode'].agg(['mean', 'sum'])
+        correct_a.columns = ["accessment_mean", 'accessment_sum']
+
+        df = pd.merge(df, correct_a, on=['assessmentItemID'], how="left")
+        ####################################
+
+        ####################################
         # base FE
         #유저들의 문제 풀이수, 정답 수, 정답률을 시간순으로 누적해서 계산
         df['user_correct_answer'] = df.groupby('userID')['answerCode'].transform(lambda x: x.cumsum().shift(1))
@@ -140,7 +146,8 @@ class Preprocess:
         # (2) FEATS는 FE가 직접적으로 작동이 되는 부분에서 언급되는것이 좋을것 같다.
         self.FEATS = ['KnowledgeTag', 'user_correct_answer', 'user_total_answer', 
             'user_acc', 'test_mean', 'test_sum', 'tag_mean','tag_sum',
-            'elapsed','main_ca_correct_answer','main_ca_total_answer','main_ca_acc','elapsed_test']
+            'elapsed','main_ca_correct_answer','main_ca_total_answer','main_ca_acc','elapsed_test',
+            'accessment_mean', 'accessment_sum']
 
         # TODO catboost는 Categorical columns name을 지정해줘야한다.
         #self.CATS = ['KnowledgeTag']
