@@ -80,18 +80,6 @@ class Preprocess:
         diff = diff.fillna(pd.Timedelta(seconds=0))
         diff = diff['Timestamp'].apply(lambda x: x.total_seconds())
         df['elapsed'] = diff
-
-        normal_elapsed=df[(df['elapsed']!=0) & (df['elapsed']<600)]['elapsed']
-        normal_mean = normal_elapsed.mean()
-        normal_var = normal_elapsed.std()
-
-        def normalize_outlier(x):
-            if x>660:
-                return x #np.random.choice(normal_elapsed)
-            else:
-                return x
-
-        df['elapsed'] = df['elapsed'].apply(normalize_outlier)
         ####################################
 
         #################################### 0.003
@@ -101,6 +89,23 @@ class Preprocess:
         df['main_ca_correct_answer'] = df.groupby('main_ca')['answerCode'].transform(lambda x: x.cumsum().shift(1))
         df['main_ca_total_answer'] = df.groupby('main_ca')['answerCode'].cumcount()
         df['main_ca_acc'] = df['main_ca_correct_answer']/df['main_ca_total_answer']
+        ####################################
+
+        ####################################
+        # FE. 3 : 유저별 하나의 시험지를 다 푸는데 걸리는 시간
+        # ⇒ 이상치 처리 후(마지막문제 0초, 오랜만에 푸는 문제 수만초 등) 유저별,시험지별 시간의 평균 
+        normal_elapsed=df[(df['elapsed']!=0) & (df['elapsed']<660)]['elapsed']
+
+        def normalize_outlier(x):
+            if x>660:
+                return np.random.choice(normal_elapsed)
+            else:
+                return x
+
+        df['normal_elapsed'] = df['elapsed'].apply(normalize_outlier)
+        elapsed_test = df.groupby(['userID','testId']).mean()['normal_elapsed']
+        elapsed_test.name='elapsed_test'
+        df = pd.merge(df,elapsed_test, on=['userID','testId'], how="left")
         ####################################
 
         ####################################
@@ -125,7 +130,7 @@ class Preprocess:
         # (2) FEATS는 FE가 직접적으로 작동이 되는 부분에서 언급되는것이 좋을것 같다.
         self.FEATS = ['KnowledgeTag', 'user_correct_answer', 'user_total_answer', 
             'user_acc', 'test_mean', 'test_sum', 'tag_mean','tag_sum',
-            'elapsed','main_ca_correct_answer','main_ca_total_answer','main_ca_acc']
+            'elapsed','main_ca_correct_answer','main_ca_total_answer','main_ca_acc','elapsed_test']
 
         # TODO catboost는 Categorical columns name을 지정해줘야한다.
         #self.CATS = ['KnowledgeTag']
