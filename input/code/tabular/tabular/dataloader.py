@@ -127,7 +127,6 @@ class Preprocess:
         ####################################
         ## FE. 6 : 시험지 많이 풀수록 맞출 확률이 높아진다? => 0.0007정도 성능 하락
         df['testCnt'] = df.groupby(['userID', 'testId']).cumcount()
-
         ####################################
 
         ####################################
@@ -135,6 +134,14 @@ class Preprocess:
         df['hour'] = df['Timestamp'].transform(lambda x: pd.to_datetime(x, unit='s').dt.hour)
         hour_dict = df.groupby(['hour'])['answerCode'].mean().to_dict()
         df['correct_per_hour'] = df['hour'].map(hour_dict)
+        ####################################
+
+        ####################################
+        ## FE. 8 : 태그 + 시험지 정답률
+        correct_ka = df.groupby(['KnowledgeTag', 'testId'])['answerCode'].agg(['mean', 'sum'])
+        correct_ka.columns = ["ka_accessment_mean", 'ka_accessment_sum']
+
+        df = pd.merge(df, correct_ka, on=['testId', 'KnowledgeTag'], how="left")
         ####################################
 
         ####################################
@@ -157,10 +164,10 @@ class Preprocess:
 
 
         # (2) FEATS는 FE가 직접적으로 작동이 되는 부분에서 언급되는것이 좋을것 같다.
-        self.FEATS = ['KnowledgeTag', 'user_correct_answer', 'user_total_answer', 
+        self.FEATS = ['KnowledgeTag', 'assessmentItemID', 'user_correct_answer', 'user_total_answer', 
             'user_acc', 'test_mean', 'test_sum', 'tag_mean','tag_sum',
             'elapsed','main_ca_correct_answer','main_ca_total_answer','main_ca_acc','elapsed_test',
-            'accessment_mean', 'accessment_sum','hour','correct_per_hour','testCnt']
+            'accessment_mean', 'accessment_sum', 'ka_accessment_mean', 'ka_accessment_sum']
 
         # TODO catboost는 Categorical columns name을 지정해줘야한다.
         #self.CATS = ['KnowledgeTag']
