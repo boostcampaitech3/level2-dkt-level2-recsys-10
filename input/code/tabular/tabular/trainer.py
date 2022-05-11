@@ -36,18 +36,6 @@ def run(args, train_data, valid_data, X_valid, y_valid, preprocess):
         #########################
 
         model = lgb.LGBMClassifier(
-<<<<<<< HEAD
-        learning_rate = args.learning_rate,
-        n_estimators  = args.num_boost_round,
-        max_depth = args.max_depth,
-        path_smooth = 0.10
-        )
-
-        model.fit(
-            X = X_train[preprocess.FEATS], 
-            y = y_train,
-            eval_set = [(X_train[preprocess.FEATS],y_train),(X_valid[preprocess.FEATS],y_valid)],
-=======
             objective = 'binary',
             learning_rate = args.learning_rate,
             n_estimators = args.num_boost_round,
@@ -65,10 +53,9 @@ def run(args, train_data, valid_data, X_valid, y_valid, preprocess):
         )
 
         model.fit(
-            X = X_train, 
+            X = X_train[preprocess.FEATS], 
             y = y_train,
-            eval_set = [(X_train,y_train),(X_valid,y_valid)],
->>>>>>> experiment#59
+            eval_set = [(X_train[preprocess.FEATS],y_train),(X_valid[preprocess.FEATS],y_valid)],
             eval_names=['train','validation'],
             eval_metric = custom_loss,
             verbose=args.verbose_eval,
@@ -101,17 +88,9 @@ def run(args, train_data, valid_data, X_valid, y_valid, preprocess):
             verbose=args.verbose_eval)
 
     
-<<<<<<< HEAD
-    args.auc, acc = model_predict(args, model, X_valid, y_valid)
-    print("------args.auc--------")
-    print(args.auc)
-    print(str(args.auc)[2:6])
-    save_model(args, model)
-=======
     # auc, acc = model_predict(args, model, X_valid, y_valid)
     # args.auc = auc
     
->>>>>>> experiment#59
 
     if args.model == 'lightgbm':
         eval_result = model.evals_result_

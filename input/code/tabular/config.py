@@ -45,13 +45,13 @@ else:
         #     'max': 300
         #     },
 
-        # 'max_depth':{
-        #     # 'values':[i for i in range(-1,30,2)] # LGBM
-        #     'distribution': 'int_uniform',
-        #     'min': 3,
-        #     'max': 12  
-        #     # 'values':[i for i in range(1,16,2)] # CatBoost 최대 16
-        #     },
+        'max_depth':{
+            # 'values':[i for i in range(-1,30,2)] # LGBM
+            # 'distribution': 'int_uniform',
+            # 'min': 3,
+            # 'max': 12  
+            'values':[i for i in range(1,16,2)] # CatBoost 최대 16
+            },
 
         'num_leaves':{
             'values':[i for i in range(20,3000,20)] # LGBM
@@ -98,16 +98,7 @@ else:
             'min': 10,
             'max': 255
             },
-<<<<<<< HEAD
-        'max_depth':{
-            # 'values':[i for i in range(-1,30,2)] # LGBM  
-            'values':[i for i in range(1,16,2)] # CatBoost 최대 16
-            },
-    }
-}
-=======
 
         }
 
     }
->>>>>>> experiment#59
