@@ -31,6 +31,9 @@ def main(args):
 
     print("[STEP 4] Train the Model")
     if args.sweep:
+        if args.model == 'lgbm':
+            config.sweep_config['parameters']['max_depth'] = {'values':[i for i in range(-1,30,2)]} # LGBM  
+
         def runner():
             wandb.init(config=vars(args))
             trainer.run(wandb.config, train_data, valid_data, X_valid, y_valid)
