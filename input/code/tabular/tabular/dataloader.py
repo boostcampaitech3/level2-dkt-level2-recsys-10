@@ -11,6 +11,7 @@ import lightgbm as lgb
 from catboost import Pool
 from sklearn.preprocessing import LabelEncoder
 
+import swifter
 
 class Preprocess:
     def __init__(self, args):
@@ -33,7 +34,7 @@ class Preprocess:
         np.save(le_path, encoder.classes_)
 
     def __preprocessing(self, df, is_train=True):
-        cate_cols = ["assessmentItemID", "testId", "KnowledgeTag", 'testId_first']
+        cate_cols = ["assessmentItemID", "testId", "KnowledgeTag"]
 
         if not os.path.exists(self.args.asset_dir):
             os.makedirs(self.args.asset_dir)
@@ -190,12 +191,24 @@ class Preprocess:
         df['tag_accessmentID_mul'] = df['tag_mean'] * df['accessment_mean']
         ###################################
 
+        ###################################
+        # FE. 15 : accessmentItemID 정답률 범주화
+        problem_mean_lower = df['accessment_mean'].quantile(0.25)
+        problem_mean_median = df['accessment_mean'].quantile(0.5)
+        problem_mean_upper = df['accessment_mean'].quantile(0.75)
+
+        df['accessment_mean_ca'] = df['accessment_mean'].apply(
+            lambda x: "4" if x <= problem_mean_lower
+            else ("3" if x <= problem_mean_median
+            else "2" if x <= problem_mean_upper else "1")
+        )
+        ###################################
 
         # (2) FEATS는 FE가 직접적으로 작동이 되는 부분에서 언급되는것이 좋을것 같다.
         self.FEATS = ['KnowledgeTag', 'assessmentItemID', 'user_correct_answer', 'user_total_answer', 
             'user_acc', 'test_mean', 'test_sum', 'tag_mean','tag_sum',
             'elapsed','main_ca_correct_answer','main_ca_total_answer','main_ca_acc','elapsed_test',
-            'accessment_mean', 'accessment_sum', 'ka_accessment_mean', 'ka_accessment_sum', 'mean_time_second', 'tag_accessmentID_mul']
+            'accessment_mean', 'accessment_sum', 'ka_accessment_mean', 'ka_accessment_sum', 'mean_time_second', 'tag_accessmentID_mul', 'accessment_mean_ca']
             # 'userID', 'user_tag_cnt']
 
 
