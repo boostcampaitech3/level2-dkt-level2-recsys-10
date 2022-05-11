@@ -10,6 +10,7 @@ from wandb.lightgbm import wandb_callback
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import accuracy_score
 import joblib
+import matplotlib.pyplot as plt
 
 def run(args, train_data, valid_data, X_valid, y_valid):
     if args.model == 'lightgbm':
@@ -33,6 +34,20 @@ def run(args, train_data, valid_data, X_valid, y_valid):
             verbose=args.verbose_eval,
             early_stopping_rounds=args.early_stopping_rounds
         )
+        # lgb.plot_importance(model)
+        # fig, ax = plt.subplots(figsize=(10, 12))
+        ax = plt.figure(figsize=(16, 10))
+        ax.ytick(labelsize = 5)
+        ax = lgb.plot_importance(model, max_num_features=len(args.FEATS), importance_type='split')
+        ax.set(title=f'Feature Importance (split)',
+            xlabel='Feature Importance',
+            ylabel='Features')
+        
+        
+        ax.figure.savefig(f'./fi_split1.png', dpi=300)
+
+        # lgb.plot_importance(model)
+        # plt.show()
 
     elif args.model == 'catboost':
         custom_loss = ["AUC", "Accuracy"]

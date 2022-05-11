@@ -75,7 +75,7 @@ class Preprocess:
         df = df.sort_values(by=['userID', 'Timestamp']).reset_index(drop=True)
         
         #################################### 0.03
-        # F.E1 : 문제 푸는 시간 
+        # FE. 1 : 문제 푸는 시간 
         diff = df.loc[:, ['userID', 'Timestamp']].groupby('userID').diff().fillna(pd.Timedelta(seconds=0))
         diff = diff.fillna(pd.Timedelta(seconds=0))
         diff = diff['Timestamp'].apply(lambda x: x.total_seconds())
@@ -95,7 +95,7 @@ class Preprocess:
         ####################################
 
         #################################### 0.003
-        # FE.2 시험지 대분류 (A000 쪼개서) 별 정답률 구하기 
+        # FE. 2 : 시험지 대분류 (A000 쪼개서) 별 정답률 구하기 
         df['main_ca'] = df['testId'].str[:4]
 
         df['main_ca_correct_answer'] = df.groupby('main_ca')['answerCode'].transform(lambda x: x.cumsum().shift(1))
@@ -121,7 +121,7 @@ class Preprocess:
         df = pd.merge(df, correct_k, on=['KnowledgeTag'], how="left")
         ####################################
 
-    
+
         # (2) FEATS는 FE가 직접적으로 작동이 되는 부분에서 언급되는것이 좋을것 같다.
         self.FEATS = ['KnowledgeTag', 'user_correct_answer', 'user_total_answer', 
             'user_acc', 'test_mean', 'test_sum', 'tag_mean','tag_sum',
@@ -129,10 +129,10 @@ class Preprocess:
 
         # TODO catboost는 Categorical columns name을 지정해줘야한다.
         #self.CATS = ['KnowledgeTag']
-        self.CATS = []
+        self.CATS = ['KnowledgeTag']
 
         df.sort_values(by=['userID','Timestamp'], inplace=True)
-
+        print(df)
         return df
 
     def load_data_from_file(self, test_file_name, train_file_name=None, is_train = True):
