@@ -145,6 +145,11 @@ class Preprocess:
         ####################################
 
         ####################################
+        ## FE. 10 : 문항번호 + 태그
+        # df['access_tag'] = df['assessmentItemID'].str[-3:] + '_' + df['KnowledgeTag']
+        ####################################
+
+        ####################################
         # base FE
         #유저들의 문제 풀이수, 정답 수, 정답률을 시간순으로 누적해서 계산
         df['user_correct_answer'] = df.groupby('userID')['answerCode'].transform(lambda x: x.cumsum().shift(1))
@@ -171,7 +176,7 @@ class Preprocess:
 
         # TODO catboost는 Categorical columns name을 지정해줘야한다.
         #self.CATS = ['KnowledgeTag']
-        self.CATS = ['KnowledgeTag']
+        self.CATS = ['KnowledgeTag', 'assessmentItemID']
 
         df.sort_values(by=['userID','Timestamp'], inplace=True)
         print(df)
