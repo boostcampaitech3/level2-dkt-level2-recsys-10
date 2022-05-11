@@ -77,7 +77,15 @@ def run(args, train_data, valid_data, X_valid, y_valid, preprocess):
             learning_rate=args.learning_rate, # TODO lr 관련 파라미터 확인하기
             task_type='GPU', # TODO GPU 사용 가능할 때만 사용하록 if 문으로 변경
             custom_loss = custom_loss,
-            max_depth = args.max_depth
+            max_depth = args.max_depth,
+            bagging_temperature = args.bagging_temperature,
+            random_strength = args.random_strength,
+            colsample_bylevel = args.colsample_bylevel,
+            l2_leaf_reg = args.l2_leaf_reg,
+            min_child_samples = args.min_child_samples,
+            max_bin = args.max_bin,
+            ob_type = args.ob_type
+
         )
         model.fit(
             train_data, 
