@@ -21,7 +21,7 @@ def run(args, train_data, valid_data, X_valid, y_valid):
 
         model = lgb.LGBMClassifier(
         learning_rate = args.learning_rate,
-        iterations = args.num_boost_round,
+        n_estimators  = args.num_boost_round,
         max_depth = args.max_depth
         )
 
@@ -37,7 +37,7 @@ def run(args, train_data, valid_data, X_valid, y_valid):
         # lgb.plot_importance(model)
         # fig, ax = plt.subplots(figsize=(10, 12))
         ax = plt.figure(figsize=(16, 10))
-        ax.ytick(labelsize = 5)
+        # ax.ytick(labelsize = 5)
         ax = lgb.plot_importance(model, max_num_features=len(args.FEATS), importance_type='split')
         ax.set(title=f'Feature Importance (split)',
             xlabel='Feature Importance',
