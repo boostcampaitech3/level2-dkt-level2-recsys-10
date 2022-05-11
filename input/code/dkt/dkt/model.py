@@ -37,14 +37,15 @@ class LSTM(nn.Module):
         # self.comb_proj = nn.Linear((self.hidden_dim // 3) * 4, self.hidden_dim)
 
         # 범주형 변수 처리
-        self.embedding_interaction = nn.Embedding(3, self.hidden_dim // self.args.dim_div)
+        dim_div = len(self.args.n_embedding_layers)
+        self.embedding_interaction = nn.Embedding(3, self.hidden_dim // dim_div)
         self.embedding_features = nn.ModuleList([])
         for value in self.args.n_embedding_layers:
-            self.embedding_features.append(nn.Embedding(value + 1, self.hidden_dim // self.args.dim_div))
+            self.embedding_features.append(nn.Embedding(value + 1, self.hidden_dim // dim_div))
 
         # embedding combination projection
         # +1은 interaction
-        self.comb_proj = nn.Linear((self.hidden_dim//self.args.dim_div)*(len(self.args.n_embedding_layers)+1)+len(self.args.CON_COLUMN), self.hidden_dim)
+        self.comb_proj = nn.Linear((self.hidden_dim//dim_div)*(dim_div+1)+len(self.args.CON_COLUMN), self.hidden_dim)
 
         self.lstm = nn.LSTM(
             self.hidden_dim, self.hidden_dim, self.n_layers, batch_first=True
@@ -140,14 +141,14 @@ class LSTMATTN(nn.Module):
 
         # # embedding combination projection
         # self.comb_proj = nn.Linear((self.hidden_dim // 3) * 4, self.hidden_dim)
-        
-        self.embedding_interaction = nn.Embedding(3, self.hidden_dim // self.args.dim_div)
+        dim_div = len(self.args.n_embedding_layers)
+        self.embedding_interaction = nn.Embedding(3, self.hidden_dim // dim_div)
         self.embedding_features = nn.ModuleList([])
         for value in self.args.n_embedding_layers:
-            self.embedding_features.append(nn.Embedding(value + 1, self.hidden_dim // self.args.dim_div))
+            self.embedding_features.append(nn.Embedding(value + 1, self.hidden_dim // dim_div))
 
         # embedding combination projection
-        self.comb_proj = nn.Linear((self.hidden_dim//self.args.dim_div)*(len(self.args.n_embedding_layers)+1)+len(self.args.CON_COLUMN), self.hidden_dim)
+        self.comb_proj = nn.Linear((self.hidden_dim//dim_div)*(dim_div+1)+len(self.args.CON_COLUMN), self.hidden_dim)
 
         self.lstm = nn.LSTM(
             self.hidden_dim, self.hidden_dim, self.n_layers, batch_first=True
@@ -263,13 +264,14 @@ class Bert(nn.Module):
 
         # # embedding combination projection
         # self.comb_proj = nn.Linear((self.hidden_dim // 3) * 4, self.hidden_dim)
-        self.embedding_interaction = nn.Embedding(3, self.hidden_dim // self.args.dim_div)
+        dim_div = len(self.args.n_embedding_layers)
+        self.embedding_interaction = nn.Embedding(3, self.hidden_dim // dim_div)
         self.embedding_features = nn.ModuleList([])
         for value in self.args.n_embedding_layers:
-            self.embedding_features.append(nn.Embedding(value + 1, self.hidden_dim // self.args.dim_div))
+            self.embedding_features.append(nn.Embedding(value + 1, self.hidden_dim // dim_div))
 
         # embedding combination projection
-        self.comb_proj = nn.Linear((self.hidden_dim//self.args.dim_div)*(len(self.args.n_embedding_layers)+1)+len(self.args.CON_COLUMN), self.hidden_dim)
+        self.comb_proj = nn.Linear((self.hidden_dim//dim_div)*(dim_div+1)+len(self.args.CON_COLUMN), self.hidden_dim)
 
         # Bert config
         self.config = BertConfig(
@@ -420,19 +422,20 @@ class Saint(nn.Module):
         # self.dec_comb_proj = nn.Linear((self.hidden_dim//3)*4, self.hidden_dim)
 
         # test, question, tag
+        dim_div = len(self.args.n_embedding_layers)
         self.embedding_features = nn.ModuleList([])
         for value in self.args.n_embedding_layers:
-            self.embedding_features.append(nn.Embedding(value + 1, self.hidden_dim // self.args.dim_div))
+            self.embedding_features.append(nn.Embedding(value + 1, self.hidden_dim // dim_div))
         
         # encoder combination projection
-        self.enc_comb_proj = nn.Linear((self.hidden_dim//self.args.dim_div)*len(self.args.n_embedding_layers)+len(self.args.CON_COLUMN), self.hidden_dim)
+        self.enc_comb_proj = nn.Linear((self.hidden_dim//dim_div)*dim_div + len(self.args.CON_COLUMN), self.hidden_dim)
 
         # DECODER embedding
         # interaction은 현재 correct으로 구성되어있다. correct(1, 2) + padding(0)
-        self.embedding_interaction = nn.Embedding(3, self.hidden_dim//self.args.dim_div)
+        self.embedding_interaction = nn.Embedding(3, self.hidden_dim//dim_div)
         
         # decoder combination projection
-        self.dec_comb_proj = nn.Linear((self.hidden_dim//self.args.dim_div)*(len(self.args.n_embedding_layers)+1)+len(self.args.CON_COLUMN), self.hidden_dim)
+        self.dec_comb_proj = nn.Linear((self.hidden_dim//dim_div)*(dim_div+1)+len(self.args.CON_COLUMN), self.hidden_dim)
 
         # Positional encoding
         self.pos_encoder = PositionalEncoding(self.hidden_dim, self.dropout, self.args.max_seq_len)
@@ -555,6 +558,7 @@ class LastQuery(nn.Module):
 
         # Padding
         self.post_pad = post_pad
+
         
         # Embedding 
         # interaction은 현재 correct으로 구성되어있다. correct(1, 2) + padding(0)
@@ -570,19 +574,20 @@ class LastQuery(nn.Module):
         # 기존 keetar님 솔루션에서는 Positional Embedding은 사용되지 않습니다
         # 하지만 사용 여부는 자유롭게 결정해주세요 :)
         # self.embedding_position = nn.Embedding(self.args.max_seq_len, self.hidden_dim)
-        
+
         # Embedding 
         # interaction은 현재 correct으로 구성되어있다. correct(1, 2) + padding(0)
-        self.embedding_interaction = nn.Embedding(3, self.hidden_dim//self.args.dim_div)
+        dim_div = len(self.args.n_embedding_layers)
+        self.embedding_interaction = nn.Embedding(3, self.hidden_dim//dim_div)
 
 #         self.embedding_position = nn.Embedding(self.args.max_seq_len, self.hidden_dim)
     
         self.embedding_features = nn.ModuleList([])
         for value in self.args.n_embedding_layers:
-            self.embedding_features.append(nn.Embedding(value + 1, self.hidden_dim // self.args.dim_div))
+            self.embedding_features.append(nn.Embedding(value + 1, self.hidden_dim // dim_div))
 
         # embedding combination projection
-        self.comb_proj = nn.Linear((self.hidden_dim//self.args.dim_div)*(len(self.args.n_embedding_layers)+1)+len(self.args.CON_COLUMN), self.hidden_dim)
+        self.comb_proj = nn.Linear((self.hidden_dim//dim_div)*(dim_div+1)+len(self.args.CON_COLUMN), self.hidden_dim)
 
         # Encoder
         self.query = nn.Linear(in_features=self.hidden_dim, out_features=self.hidden_dim)
@@ -807,16 +812,17 @@ class FixupEncoder(nn.Module):
 
         # Embedding 
         # interaction은 현재 correct으로 구성되어있다. correct(1, 2) + padding(0)
-        self.embedding_interaction = nn.Embedding(3, self.hidden_dim//self.args.dim_div)
+        dim_div = len(self.args.n_embedding_layers)
+        self.embedding_interaction = nn.Embedding(3, self.hidden_dim//dim_div)
 
         self.embedding_position = nn.Embedding(self.args.max_seq_len, self.hidden_dim)
     
         self.embedding_features = nn.ModuleList([])
         for value in self.args.n_embedding_layers:
-            self.embedding_features.append(nn.Embedding(value + 1, self.hidden_dim // self.args.dim_div))
+            self.embedding_features.append(nn.Embedding(value + 1, self.hidden_dim // dim_div))
 
         # embedding combination projection
-        self.comb_proj = nn.Linear((self.hidden_dim//self.args.dim_div)*(len(self.args.n_embedding_layers)+1)+len(self.args.CON_COLUMN), self.hidden_dim)
+        self.comb_proj = nn.Linear((self.hidden_dim//dim_div)*(dim_div+1)+len(self.args.CON_COLUMN), self.hidden_dim)
 
         # self.embedding_interaction = nn.Embedding(3, self.hidden_dim//3)
         # self.embedding_test = nn.Embedding(self.args.n_test + 1, self.hidden_dim//3)
@@ -924,7 +930,7 @@ class FixupEncoder(nn.Module):
         # print(embed_interaction.size())
 
         embed_features = [embed_interaction] + embed_features + con_features
-        
+
         embed = torch.cat(embed_features, 2)
         
 

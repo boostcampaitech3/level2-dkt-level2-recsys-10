@@ -56,20 +56,96 @@ class Preprocess:
             test = le.transform(df[col])
             df[col] = test
 
-        def convert_time(s):
-            timestamp = time.mktime(
-                datetime.strptime(s, "%Y-%m-%d %H:%M:%S").timetuple()
-            )
-            return int(timestamp)
+        # def convert_time(s):
+        #     timestamp = time.mktime(
+        #         datetime.strptime(s, "%Y-%m-%d %H:%M:%S").timetuple()
+        #     )
+        #     return int(timestamp)
 
-        df["Timestamp"] = df["Timestamp"].apply(convert_time)
+        # df["Timestamp"] = df["Timestamp"].apply(convert_time)
 
         return df
 
     def __feature_engineering(self, df):
         #유저별 시퀀스를 고려하기 위해 아래와 같이 정렬
-        df.sort_values(by=['userID','Timestamp'], inplace=True)
+        # df.sort_values(by=['userID','Timestamp'], inplace=True)
+        df = df.sort_values(by=['userID', 'Timestamp']).reset_index(drop=True)
         
+        #################################### 0.03
+        # FE. 1 : 문제 푸는 시간 
+        diff = df.loc[:, ['userID', 'Timestamp']].groupby('userID').diff().fillna(pd.Timedelta(seconds=0))
+        diff = diff.fillna(pd.Timedelta(seconds=0))
+        diff = diff['Timestamp'].apply(lambda x: x.total_seconds())
+        df['elapsed'] = diff
+        ####################################
+
+        #################################### 0.003
+        # FE. 2 : 시험지 대분류 (A000 쪼개서) 별 정답률 구하기 
+        df['main_ca'] = df['testId'].str[:4]
+
+        df['main_ca_correct_answer'] = df.groupby('main_ca')['answerCode'].transform(lambda x: x.cumsum().shift(1))
+        df['main_ca_total_answer'] = df.groupby('main_ca')['answerCode'].cumcount()
+        df['main_ca_acc'] = df['main_ca_correct_answer']/df['main_ca_total_answer']
+        ####################################
+
+        ####################################
+        # FE. 3 : 유저별 하나의 시험지를 다 푸는데 걸리는 시간
+        # ⇒ 이상치 처리 후(마지막문제 0초, 오랜만에 푸는 문제 수만초 등) 유저별,시험지별 시간의 평균 
+        normal_elapsed=df[(df['elapsed']!=0) & (df['elapsed']<660)]['elapsed']
+
+        def normalize_outlier(x):
+            if x>660:
+                return np.random.choice(normal_elapsed)
+            else:
+                return x
+
+        df['outliar_elapsed'] = df['elapsed'].apply(normalize_outlier)
+        elapsed_test = df.groupby(['userID','testId']).mean()['outliar_elapsed']
+        elapsed_test.name='elapsed_test'
+        df = pd.merge(df,elapsed_test, on=['userID','testId'], how="left")
+        ####################################
+
+        ####################################
+        ## FE. 4 : 과거에 푼 문제에 초점을 맞추자 => 과거 해당 문제 평균 정답률 => 약간의 성능 하락
+        df['past_content_count'] = df.groupby(['userID', 'assessmentItemID']).cumcount()
+        df['shift'] = df.groupby(['userID', 'assessmentItemID'])['answerCode'].shift().fillna(0)
+        df['past_content_correct'] = df.groupby(['userID', 'assessmentItemID'])['shift'].cumsum()
+        df.drop(['shift'], axis=1, inplace=True)
+        # 과거 해당 문제 평균 정답률
+        df['average_content_correct'] = (df['past_content_correct'] / df['past_content_count']).fillna(0)
+        ####################################
+
+        ####################################
+        ## FE. 5 : 문항별(accessmentItemID) 정답률 => 성능 매우 높아짐
+        correct_a = df.groupby(['assessmentItemID'])['answerCode'].agg(['mean', 'sum'])
+        correct_a.columns = ["assessment_mean", 'assessment_sum']
+
+        df = pd.merge(df, correct_a, on=['assessmentItemID'], how="left")
+        ####################################
+
+        ####################################
+        ## FE. 6 : 시험지 많이 풀수록 맞출 확률이 높아진다? => 0.0007정도 성능 하락
+        df['testCnt'] = df.groupby(['userID', 'testId']).cumcount()
+
+        ####################################
+
+        ####################################
+        ## FE. 7 : 문제 풀이 시간대(hour) , 시간대별 정답률(correct_per_hour) 
+        df['hour'] = df['Timestamp'].transform(lambda x: pd.to_datetime(x, unit='s').dt.hour)
+        hour_dict = df.groupby(['hour'])['answerCode'].mean().to_dict()
+        df['correct_per_hour'] = df['hour'].map(hour_dict)
+        ####################################
+
+        ####################################
+        ## FE. 8 : 태그 + 시험지 정답률
+        correct_ka = df.groupby(['KnowledgeTag', 'testId'])['answerCode'].agg(['mean', 'sum'])
+        correct_ka.columns = ["ka_accessment_mean", 'ka_accessment_sum']
+
+        df = pd.merge(df, correct_ka, on=['testId', 'KnowledgeTag'], how="left")
+        ####################################
+
+        ####################################
+        # base FE
         #유저들의 문제 풀이수, 정답 수, 정답률을 시간순으로 누적해서 계산
         df['user_correct_answer'] = df.groupby('userID')['answerCode'].transform(lambda x: x.cumsum().shift(1))
         df['user_total_answer'] = df.groupby('userID')['answerCode'].cumcount()
@@ -84,11 +160,12 @@ class Preprocess:
 
         df = pd.merge(df, correct_t, on=['testId'], how="left")
         df = pd.merge(df, correct_k, on=['KnowledgeTag'], how="left")
+        ####################################
 
         # TODO
         self.args.USERID_COLUMN = ['userID']
-        self.args.CAT_COLUMN = ["assessmentItemID", "testId", "KnowledgeTag"]
-        self.args.CON_COLUMN = ['user_correct_answer', 'user_acc']
+        self.args.CAT_COLUMN = ["assessmentItemID"] #, "testId", "KnowledgeTag"]
+        self.args.CON_COLUMN = ['assessment_mean', 'assessment_sum', 'outliar_elapsed','past_content_count'] #['user_correct_answer', 'user_acc', "accessment_mean", 'accessment_sum']
         self.args.ANSWER_COLUMN = ['answerCode']
         
         return df
@@ -97,13 +174,18 @@ class Preprocess:
         return tuple([r[x].values for x in self.args.CAT_COLUMN] + [r[x].values for x in self.args.CON_COLUMN] + [r[x].values for x in self.args.ANSWER_COLUMN])
 
     def load_data_from_file(self, test_file_name, train_file_name=None, is_train=True):
+        dtype = {
+            'userID': 'int16',
+            'answerCode': 'int8',
+            'KnowledgeTag': 'int16'
+            }        
         test_csv_file_path = os.path.join(self.args.data_dir, test_file_name)
-        test_df = pd.read_csv(test_csv_file_path)
+        test_df = pd.read_csv(test_csv_file_path,dtype=dtype, parse_dates=['Timestamp'])
         
         if is_train:
             test_df = test_df.query("answerCode != -1")
             train_csv_file_path = os.path.join(self.args.data_dir, train_file_name)
-            train_df = pd.read_csv(train_csv_file_path)
+            train_df = pd.read_csv(train_csv_file_path, dtype=dtype, parse_dates=['Timestamp'])
             self.train_userID = train_df['userID'].unique().tolist()
             self.valid_userID = test_df['userID'].unique().tolist()
             df = pd.concat([train_df, test_df], axis=0)
@@ -255,7 +337,6 @@ def slidding_window(data, args):
             augmented_datas.append(row)
         else:
             total_window = ((seq_len - window_size) // stride) + 1
-            
             # 앞에서부터 slidding window 적용
             for window_i in range(total_window):
                 # window로 잘린 데이터를 모으는 리스트
