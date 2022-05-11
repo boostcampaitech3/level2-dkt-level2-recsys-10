@@ -47,26 +47,26 @@ def parse_args(mode="train"):
 
     # lightgbm
     # parser.add_argument("--max_depth", default=-1, type=int)
-    # parser.add_argument("--num_leaves", default=20, type=int)
-    # parser.add_argument("--min_data_in_leaf", default=200, type=int)
+    # parser.add_argument("--num_leaves", default=31, type=int)
+    # parser.add_argument("--min_data_in_leaf", default=20, type=int)
     # parser.add_argument("--lambda_l1", default=0, type=int)
     # parser.add_argument("--lambda_l2", default=0, type=int)
     # parser.add_argument("--min_gain_to_split", default=0, type=float)
-    # parser.add_argument("--bagging_fraction", default=0.2, type=float)
-    # parser.add_argument("--feature_fraction", default=0.2, type=float)
+    # parser.add_argument("--bagging_fraction", default=1.0, type=float)
+    # parser.add_argument("--feature_fraction", default=1.0, type=float)
     # parser.add_argument("--bagging_freq", default=0, type=int)
-    # parser.add_argument("--path_smooth", default=1e-8, type=float)
+    # parser.add_argument("--path_smooth", default=0, type=float)
     # parser.add_argument("--max_bin", default=255, type=int)
 
     # catboost
-    parser.add_argument("--max_depth", default=1, type=int)
-    parser.add_argument("--bagging_temperature", default=0.01, type=float)
-    parser.add_argument("--random_strength", default=0, type=int)
-    parser.add_argument("--colsample_bylevel", default=0.4, type=float)
-    parser.add_argument("--l2_leaf_reg", default=1e-8, type=float)
-    parser.add_argument("--min_child_samples", default=5, type=int)
+    parser.add_argument("--max_depth", default=6, type=int)
+    parser.add_argument("--bagging_temperature", default=1, type=float)
+    parser.add_argument("--random_strength", default=1, type=int)
+    parser.add_argument("--colsample_bylevel", default=None, type=float)
+    parser.add_argument("--l2_leaf_reg", default=3.0, type=float)
+    parser.add_argument("--min_child_samples", default=1, type=int)
     parser.add_argument("--max_bin", default=200, type=int)
-    parser.add_argument("--ob_type", default='IncToDec', type=str)
+    parser.add_argument("--od_type", default='IncToDec', type=str)
 
 
     # Sweep 파라미터

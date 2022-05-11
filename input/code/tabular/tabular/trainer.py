@@ -84,7 +84,7 @@ def run(args, train_data, valid_data, X_valid, y_valid, preprocess):
             l2_leaf_reg = args.l2_leaf_reg,
             min_child_samples = args.min_child_samples,
             max_bin = args.max_bin,
-            ob_type = args.ob_type
+            od_type = args.od_type
 
         )
         model.fit(
