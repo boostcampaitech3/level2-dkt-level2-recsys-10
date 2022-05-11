@@ -107,7 +107,7 @@ class Preprocess:
         ####################################
 
         ####################################
-        ## FE. 4 : 과거에 푼 문제에 초점을 맞추자 => 과거 해당 문제 평균 정답률
+        ## FE. 4 : 과거에 푼 문제에 초점을 맞추자 => 과거 해당 문제 평균 정답률 => 약간의 성능 하락
         df['past_content_count'] = df.groupby(['userID', 'assessmentItemID']).cumcount()
         df['shift'] = df.groupby(['userID', 'assessmentItemID'])['answerCode'].shift().fillna(0)
         df['past_content_correct'] = df.groupby(['userID', 'assessmentItemID'])['shift'].cumsum()
@@ -117,7 +117,7 @@ class Preprocess:
         ####################################
 
         ####################################
-        ## FE. 5 : 문항별(accessmentItemID) 정답률
+        ## FE. 5 : 문항별(accessmentItemID) 정답률 => 성능 매우 높아짐
         correct_a = df.groupby(['assessmentItemID'])['answerCode'].agg(['mean', 'sum'])
         correct_a.columns = ["accessment_mean", 'accessment_sum']
 
@@ -125,7 +125,13 @@ class Preprocess:
         ####################################
 
         ####################################
-        ## FE. 6 : 문제 풀이 시간대(hour) , 시간대별 정답률(correct_per_hour) 
+        ## FE. 6 : 시험지 많이 풀수록 맞출 확률이 높아진다? => 0.0007정도 성능 하락
+        df['testCnt'] = df.groupby(['userID', 'testId']).cumcount()
+
+        ####################################
+
+        ####################################
+        ## FE. 7 : 문제 풀이 시간대(hour) , 시간대별 정답률(correct_per_hour) 
         df['hour'] = df['Timestamp'].transform(lambda x: pd.to_datetime(x, unit='s').dt.hour)
         hour_dict = df.groupby(['hour'])['answerCode'].mean().to_dict()
         df['correct_per_hour'] = df['hour'].map(hour_dict)
@@ -154,7 +160,7 @@ class Preprocess:
         self.FEATS = ['KnowledgeTag', 'user_correct_answer', 'user_total_answer', 
             'user_acc', 'test_mean', 'test_sum', 'tag_mean','tag_sum',
             'elapsed','main_ca_correct_answer','main_ca_total_answer','main_ca_acc','elapsed_test',
-            'accessment_mean', 'accessment_sum','hour','correct_per_hour']
+            'accessment_mean', 'accessment_sum','hour','correct_per_hour','testCnt']
 
         # TODO catboost는 Categorical columns name을 지정해줘야한다.
         #self.CATS = ['KnowledgeTag']
