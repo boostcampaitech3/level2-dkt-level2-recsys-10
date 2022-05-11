@@ -4,6 +4,8 @@ import torch.nn.functional as F
 import numpy as np
 import copy
 import math
+import re
+
 from .module import PositionalEncoding, Feed_Forward_block, EncoderLayer
 
 try:
@@ -882,7 +884,7 @@ class FixupEncoder(nn.Module):
         #                    embed_test,
         #                    embed_question,
         #                    embed_tag,], 2)
-        
+
         embed_features = []
         for _input, _embedding_feature in zip(input[:-4], self.embedding_features):
             value = _embedding_feature(_input)
