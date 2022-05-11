@@ -125,6 +125,13 @@ class Preprocess:
         ####################################
 
         ####################################
+        ## FE. 6 : 문제 풀이 시간대(hour) , 시간대별 정답률(correct_per_hour) 
+        df['hour'] = df['Timestamp'].transform(lambda x: pd.to_datetime(x, unit='s').dt.hour)
+        hour_dict = df.groupby(['hour'])['answerCode'].mean().to_dict()
+        df['correct_per_hour'] = df['hour'].map(hour_dict)
+        ####################################
+
+        ####################################
         # base FE
         #유저들의 문제 풀이수, 정답 수, 정답률을 시간순으로 누적해서 계산
         df['user_correct_answer'] = df.groupby('userID')['answerCode'].transform(lambda x: x.cumsum().shift(1))
@@ -147,7 +154,7 @@ class Preprocess:
         self.FEATS = ['KnowledgeTag', 'user_correct_answer', 'user_total_answer', 
             'user_acc', 'test_mean', 'test_sum', 'tag_mean','tag_sum',
             'elapsed','main_ca_correct_answer','main_ca_total_answer','main_ca_acc','elapsed_test',
-            'accessment_mean', 'accessment_sum']
+            'accessment_mean', 'accessment_sum','hour','correct_per_hour']
 
         # TODO catboost는 Categorical columns name을 지정해줘야한다.
         #self.CATS = ['KnowledgeTag']
