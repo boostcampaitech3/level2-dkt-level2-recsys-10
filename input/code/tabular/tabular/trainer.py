@@ -22,7 +22,8 @@ def run(args, train_data, valid_data, X_valid, y_valid):
         model = lgb.LGBMClassifier(
         learning_rate = args.learning_rate,
         n_estimators  = args.num_boost_round,
-        max_depth = args.max_depth
+        max_depth = args.max_depth,
+        path_smooth = 0.10
         )
 
         model.fit(
@@ -89,6 +90,8 @@ def run(args, train_data, valid_data, X_valid, y_valid):
 
     elif args.model == 'catboost':
         eval_result = model.get_evals_result()
+        print("------eval_result------")
+        print(eval_result['validation'].keys())
         list_run = ['learn', 'validation']
         loop_len = len(eval_result["validation"]["AUC"])
 
