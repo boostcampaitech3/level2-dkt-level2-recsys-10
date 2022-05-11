@@ -145,9 +145,16 @@ class Preprocess:
         ####################################
 
         ####################################
-        ## FE. 10 : 문항번호 + 태그
-        # df['access_tag'] = df['assessmentItemID'].str[-3:] + '_' + df['KnowledgeTag']
-        ####################################
+        ## FE. 9 : 이동 평균을 사용해 최근 n개 문제 평균 풀이 시간
+        # 기본값은 3, 후에 갯수 조정을해도 좋을듯함
+        # 3개의 값이 되지 않는 경우 0으로 처리
+        df['mean_time_second'] = df.groupby(['userID'])['normal_elapsed'].rolling(3).mean().fillna(0).values
+
+        ###################################
+        # FE. 10 : 문항번호 + 태그 => 약간의 성능 하락
+        df['problem_num'] = df['assessmentItemID'].str[-3:]
+        df['access_tag'] = df['problem_num'].map(str) + '_' + df['KnowledgeTag'].map(str)
+        ###################################
 
         ####################################
         # base FE
@@ -172,7 +179,7 @@ class Preprocess:
         self.FEATS = ['KnowledgeTag', 'assessmentItemID', 'user_correct_answer', 'user_total_answer', 
             'user_acc', 'test_mean', 'test_sum', 'tag_mean','tag_sum',
             'elapsed','main_ca_correct_answer','main_ca_total_answer','main_ca_acc','elapsed_test',
-            'accessment_mean', 'accessment_sum', 'ka_accessment_mean', 'ka_accessment_sum']
+            'accessment_mean', 'accessment_sum', 'ka_accessment_mean', 'ka_accessment_sum', 'mean_time_second']
 
         # TODO catboost는 Categorical columns name을 지정해줘야한다.
         #self.CATS = ['KnowledgeTag']
