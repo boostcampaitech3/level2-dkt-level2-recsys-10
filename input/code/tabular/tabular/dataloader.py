@@ -109,6 +109,16 @@ class Preprocess:
         ####################################
 
         ####################################
+        ## FE. 4 : 과거에 푼 문제에 초점을 맞추자 => 과거 해당 문제 평균 정답률
+        df['past_content_count'] = df.groupby(['userID', 'assessmentItemID']).cumcount()
+        df['shift'] = df.groupby(['userID', 'assessmentItemID'])['answerCode'].shift().fillna(0)
+        df['past_content_correct'] = df.groupby(['userID', 'assessmentItemID'])['shift'].cumsum()
+        df.drop(['shift'], axis=1, inplace=True)
+        # 과거 해당 문제 평균 정답률
+        df['average_content_correct'] = (df['past_content_correct'] / df['past_content_count']).fillna(0)
+        ####################################
+
+        ####################################
         # base FE
         #유저들의 문제 풀이수, 정답 수, 정답률을 시간순으로 누적해서 계산
         df['user_correct_answer'] = df.groupby('userID')['answerCode'].transform(lambda x: x.cumsum().shift(1))
