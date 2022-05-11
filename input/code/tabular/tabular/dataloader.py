@@ -33,7 +33,7 @@ class Preprocess:
         np.save(le_path, encoder.classes_)
 
     def __preprocessing(self, df, is_train=True):
-        cate_cols = ["assessmentItemID", "testId", "KnowledgeTag", 'testId_first']
+        cate_cols = ["assessmentItemID", "testId", "KnowledgeTag", 'testId_first','problem_mid_cat']
 
         if not os.path.exists(self.args.asset_dir):
             os.makedirs(self.args.asset_dir)
