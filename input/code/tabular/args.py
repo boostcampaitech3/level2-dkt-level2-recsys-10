@@ -51,6 +51,8 @@ def parse_args(mode="train"):
     parser.add_argument("--sweep_count", default=10, type=int, help="sweep count")
     parser.add_argument("--sweep_method", type=str, default='bayes', help='grid, random, bayes' )
     parser.add_argument("--sweep_name", type=str, default='test', help='grid, random, bayes' )
+    parser.add_argument("--sweep_feats", action="store_true", help="sweep feats tune type")
+
     args = parser.parse_args()
 
     return args

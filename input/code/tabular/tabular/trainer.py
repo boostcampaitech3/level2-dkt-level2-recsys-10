@@ -12,12 +12,26 @@ from sklearn.metrics import accuracy_score
 import joblib
 import matplotlib.pyplot as plt
 
-def run(args, train_data, valid_data, X_valid, y_valid):
+from .utils import get_wandb_config
+
+def run(args, train_data, valid_data, X_valid, y_valid, preprocess):
     if args.model == 'lightgbm':
         custom_loss = ["auc", lgb_acc]
-        # data 이름 변경
+
+        if args.sweep_feats:
+            # DataLoad 시에 Feature를 변경함
+            preprocess.FEATS = get_wandb_config(args)
+            train_data = preprocess.get_train_data()
+            valid_data = preprocess.get_valid_data()
+            train_data, valid_data, X_valid, y_valid = preprocess.convert_dataset(train_data, valid_data)
+            X_train = train_data
+            y_train = valid_data
+            print('********************preprocess.FEATS after*************************') 
+            print(preprocess.FEATS)
+
         X_train = train_data
         y_train = valid_data
+        #########################
 
         model = lgb.LGBMClassifier(
         learning_rate = args.learning_rate,
@@ -26,28 +40,14 @@ def run(args, train_data, valid_data, X_valid, y_valid):
         )
 
         model.fit(
-            X = X_train[args.FEATS], 
+            X = X_train[preprocess.FEATS], 
             y = y_train,
-            eval_set = [(X_train[args.FEATS],y_train),(X_valid[args.FEATS],y_valid)],
+            eval_set = [(X_train[preprocess.FEATS],y_train),(X_valid[preprocess.FEATS],y_valid)],
             eval_names=['train','validation'],
             eval_metric = custom_loss,
             verbose=args.verbose_eval,
             early_stopping_rounds=args.early_stopping_rounds
         )
-        # lgb.plot_importance(model)
-        # fig, ax = plt.subplots(figsize=(10, 12))
-        ax = plt.figure(figsize=(16, 10))
-        # ax.ytick(labelsize = 5)
-        ax = lgb.plot_importance(model, max_num_features=len(args.FEATS), importance_type='split')
-        ax.set(title=f'Feature Importance (split)',
-            xlabel='Feature Importance',
-            ylabel='Features')
-        
-        
-        ax.figure.savefig(f'./fi_split1.png', dpi=300)
-
-        # lgb.plot_importance(model)
-        # plt.show()
 
     elif args.model == 'catboost':
         custom_loss = ["AUC", "Accuracy"]
