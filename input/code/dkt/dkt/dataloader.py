@@ -32,7 +32,7 @@ class Preprocess:
         np.save(le_path, encoder.classes_)
 
     def __preprocessing(self, df, is_train=True):
-        cate_cols = self.args.USE_COLUMN
+        cate_cols = self.args.CAT_COLUMN
 
         if not os.path.exists(self.args.asset_dir):
             os.makedirs(self.args.asset_dir)
@@ -87,13 +87,14 @@ class Preprocess:
 
         # TODO
         self.args.USERID_COLUMN = ['userID']
-        self.args.USE_COLUMN = ["assessmentItemID", "testId", "KnowledgeTag", 'user_correct_answer', 'user_acc']
+        self.args.CAT_COLUMN = ["assessmentItemID", "testId", "KnowledgeTag"]
+        self.args.CON_COLUMN = ['user_correct_answer', 'user_acc']
         self.args.ANSWER_COLUMN = ['answerCode']
         
         return df
 
     def df_group_value_apply(self, r):
-        return tuple([r[x].values for x in self.args.USE_COLUMN] + [r[x].values for x in self.args.ANSWER_COLUMN])
+        return tuple([r[x].values for x in self.args.CAT_COLUMN] + [r[x].values for x in self.args.CON_COLUMN] + [r[x].values for x in self.args.ANSWER_COLUMN])
 
     def load_data_from_file(self, test_file_name, train_file_name=None, is_train=True):
         test_csv_file_path = os.path.join(self.args.data_dir, test_file_name)
@@ -116,7 +117,7 @@ class Preprocess:
         # 인코딩된 mapper 정보 저장
         # 추후 feature를 embedding할 시에 embedding_layer의 input 크기를 결정할때 사용
         self.args.n_embedding_layers = []       # 나중에 사용할 떄 embedding key들을 저장
-        for val in self.args.USE_COLUMN:
+        for val in self.args.CAT_COLUMN:
             self.args.n_embedding_layers.append(len(np.load(os.path.join(self.args.asset_dir, val+'_classes.npy'))))
             
         # self.args.n_questions = len(
@@ -131,7 +132,7 @@ class Preprocess:
         # 유저별 시간을 기준으로 sort
         df = df.sort_values(by=["userID", "Timestamp"], axis=0)
         # columns = ["userID", "assessmentItemID", "testId", "answerCode", "KnowledgeTag"]
-        columns = self.args.USERID_COLUMN+self.args.USE_COLUMN+self.args.ANSWER_COLUMN
+        columns = self.args.USERID_COLUMN+self.args.CAT_COLUMN+self.args.CON_COLUMN+self.args.ANSWER_COLUMN
         group = (
             df[columns]
             .groupby("userID")

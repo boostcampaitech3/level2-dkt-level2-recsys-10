@@ -35,6 +35,8 @@ class LSTM(nn.Module):
 
         # # embedding combination projection
         # self.comb_proj = nn.Linear((self.hidden_dim // 3) * 4, self.hidden_dim)
+
+        # 범주형 변수 처리
         self.embedding_interaction = nn.Embedding(3, self.hidden_dim // self.args.dim_div)
         self.embedding_features = nn.ModuleList([])
         for value in self.args.n_embedding_layers:
@@ -42,7 +44,7 @@ class LSTM(nn.Module):
 
         # embedding combination projection
         # +1은 interaction
-        self.comb_proj = nn.Linear((self.hidden_dim//self.args.dim_div)*(len(self.args.n_embedding_layers)+1), self.hidden_dim)
+        self.comb_proj = nn.Linear((self.hidden_dim//self.args.dim_div)*(len(self.args.n_embedding_layers)+1)+len(self.args.CON_COLUMN), self.hidden_dim)
 
         self.lstm = nn.LSTM(
             self.hidden_dim, self.hidden_dim, self.n_layers, batch_first=True
@@ -86,11 +88,16 @@ class LSTM(nn.Module):
         # )
 
         embed_features = []
-        for _input, _embedding_feature in zip(input[:-4], self.embedding_features):
+        for _input, _embedding_feature in zip(input[:len(self.args.CAT_COLUMN)], self.embedding_features):
             value = _embedding_feature(_input)
             embed_features.append(value)
 
-        embed_features = [embed_interaction] + embed_features
+        con_features = [feature.unsqueeze(-1) for feature in input[len(self.args.CAT_COLUMN):-4]]
+        # print(con_features[0].size())
+        # print(embed_features[0].size())
+        # print(embed_interaction.size())
+
+        embed_features = [embed_interaction] + embed_features + con_features
 
         embed = torch.cat(embed_features, 2)
         
@@ -140,7 +147,7 @@ class LSTMATTN(nn.Module):
             self.embedding_features.append(nn.Embedding(value + 1, self.hidden_dim // self.args.dim_div))
 
         # embedding combination projection
-        self.comb_proj = nn.Linear((self.hidden_dim//self.args.dim_div)*(len(self.args.n_embedding_layers)+1), self.hidden_dim)
+        self.comb_proj = nn.Linear((self.hidden_dim//self.args.dim_div)*(len(self.args.n_embedding_layers)+1)+len(self.args.CON_COLUMN), self.hidden_dim)
 
         self.lstm = nn.LSTM(
             self.hidden_dim, self.hidden_dim, self.n_layers, batch_first=True
@@ -194,11 +201,16 @@ class LSTMATTN(nn.Module):
         # )
 
         embed_features = []
-        for _input, _embedding_feature in zip(input[:-4], self.embedding_features):
+        for _input, _embedding_feature in zip(input[:len(self.args.CAT_COLUMN)], self.embedding_features):
             value = _embedding_feature(_input)
             embed_features.append(value)
 
-        embed_features = [embed_interaction] + embed_features
+        con_features = [feature.unsqueeze(-1) for feature in input[len(self.args.CAT_COLUMN):-4]]
+        # print(con_features[0].size())
+        # print(embed_features[0].size())
+        # print(embed_interaction.size())
+
+        embed_features = [embed_interaction] + embed_features + con_features
 
         embed = torch.cat(embed_features, 2)
 
@@ -257,7 +269,7 @@ class Bert(nn.Module):
             self.embedding_features.append(nn.Embedding(value + 1, self.hidden_dim // self.args.dim_div))
 
         # embedding combination projection
-        self.comb_proj = nn.Linear((self.hidden_dim//self.args.dim_div)*(len(self.args.n_embedding_layers)+1), self.hidden_dim)
+        self.comb_proj = nn.Linear((self.hidden_dim//self.args.dim_div)*(len(self.args.n_embedding_layers)+1)+len(self.args.CON_COLUMN), self.hidden_dim)
 
         # Bert config
         self.config = BertConfig(
@@ -354,11 +366,16 @@ class Bert(nn.Module):
         # )
 
         embed_features = []
-        for _input, _embedding_feature in zip(input[:-4], self.embedding_features):
+        for _input, _embedding_feature in zip(input[:len(self.args.CAT_COLUMN)], self.embedding_features):
             value = _embedding_feature(_input)
             embed_features.append(value)
 
-        embed_features = [embed_interaction] + embed_features
+        con_features = [feature.unsqueeze(-1) for feature in input[len(self.args.CAT_COLUMN):-4]]
+        # print(con_features[0].size())
+        # print(embed_features[0].size())
+        # print(embed_interaction.size())
+
+        embed_features = [embed_interaction] + embed_features + con_features
 
         embed = torch.cat(embed_features, 2)
 
@@ -408,14 +425,14 @@ class Saint(nn.Module):
             self.embedding_features.append(nn.Embedding(value + 1, self.hidden_dim // self.args.dim_div))
         
         # encoder combination projection
-        self.enc_comb_proj = nn.Linear((self.hidden_dim//self.args.dim_div)*len(self.args.n_embedding_layers), self.hidden_dim)
+        self.enc_comb_proj = nn.Linear((self.hidden_dim//self.args.dim_div)*len(self.args.n_embedding_layers)+len(self.args.CON_COLUMN), self.hidden_dim)
 
         # DECODER embedding
         # interaction은 현재 correct으로 구성되어있다. correct(1, 2) + padding(0)
         self.embedding_interaction = nn.Embedding(3, self.hidden_dim//self.args.dim_div)
         
         # decoder combination projection
-        self.dec_comb_proj = nn.Linear((self.hidden_dim//self.args.dim_div)*(len(self.args.n_embedding_layers)+1), self.hidden_dim)
+        self.dec_comb_proj = nn.Linear((self.hidden_dim//self.args.dim_div)*(len(self.args.n_embedding_layers)+1)+len(self.args.CON_COLUMN), self.hidden_dim)
 
         # Positional encoding
         self.pos_encoder = PositionalEncoding(self.hidden_dim, self.dropout, self.args.max_seq_len)
@@ -461,9 +478,13 @@ class Saint(nn.Module):
         #                        embed_tag,], 2)
 
         embed_features = []
-        for _input, _embedding_feature in zip(input[:-4], self.embedding_features):
+        for _input, _embedding_feature in zip(input[:len(self.args.CAT_COLUMN)], self.embedding_features):
             value = _embedding_feature(_input)
             embed_features.append(value)
+
+        con_features = [feature.unsqueeze(-1) for feature in input[len(self.args.CAT_COLUMN):-4]]
+
+        embed_features = embed_features + con_features
 
         embed_enc = torch.cat(embed_features, 2)
 
@@ -474,10 +495,10 @@ class Saint(nn.Module):
         # embed_question = self.embedding_question(question)
         # embed_tag = self.embedding_tag(tag)
 
-        embed_features = []
-        for _input, _embedding_feature in zip(input[:-4], self.embedding_features):
-            value = _embedding_feature(_input)
-            embed_features.append(value)
+        # embed_features = []
+        # for _input, _embedding_feature in zip(input[:-4], self.embedding_features):
+        #     value = _embedding_feature(_input)
+        #     embed_features.append(value)
 
         embed_interaction = self.embedding_interaction(interaction)
 
@@ -561,7 +582,7 @@ class LastQuery(nn.Module):
             self.embedding_features.append(nn.Embedding(value + 1, self.hidden_dim // self.args.dim_div))
 
         # embedding combination projection
-        self.comb_proj = nn.Linear((self.hidden_dim//self.args.dim_div)*(len(self.args.n_embedding_layers)+1), self.hidden_dim)
+        self.comb_proj = nn.Linear((self.hidden_dim//self.args.dim_div)*(len(self.args.n_embedding_layers)+1)+len(self.args.CON_COLUMN), self.hidden_dim)
 
         # Encoder
         self.query = nn.Linear(in_features=self.hidden_dim, out_features=self.hidden_dim)
@@ -699,12 +720,19 @@ class LastQuery(nn.Module):
         #                    embed_question,
         #                    embed_tag,], 2)
 
+        
         embed_features = []
-        for _input, _embedding_feature in zip(input[:-4], self.embedding_features):
+        for _input, _embedding_feature in zip(input[:len(self.args.CAT_COLUMN)], self.embedding_features):
             value = _embedding_feature(_input)
             embed_features.append(value)
-    
-        embed_features = [embed_interaction] + embed_features
+
+        con_features = [feature.unsqueeze(-1) for feature in input[len(self.args.CAT_COLUMN):-4]]
+        # print(con_features[0].size())
+        # print(embed_features[0].size())
+        # print(embed_interaction.size())
+
+        embed_features = [embed_interaction] + embed_features + con_features
+
         embed = torch.cat(embed_features, 2)
 
         embed = self.comb_proj(embed)
@@ -788,7 +816,7 @@ class FixupEncoder(nn.Module):
             self.embedding_features.append(nn.Embedding(value + 1, self.hidden_dim // self.args.dim_div))
 
         # embedding combination projection
-        self.comb_proj = nn.Linear((self.hidden_dim//self.args.dim_div)*(len(self.args.n_embedding_layers)+1), self.hidden_dim)
+        self.comb_proj = nn.Linear((self.hidden_dim//self.args.dim_div)*(len(self.args.n_embedding_layers)+1)+len(self.args.CON_COLUMN), self.hidden_dim)
 
         # self.embedding_interaction = nn.Embedding(3, self.hidden_dim//3)
         # self.embedding_test = nn.Embedding(self.args.n_test + 1, self.hidden_dim//3)
@@ -886,11 +914,17 @@ class FixupEncoder(nn.Module):
         #                    embed_tag,], 2)
 
         embed_features = []
-        for _input, _embedding_feature in zip(input[:-4], self.embedding_features):
+        for _input, _embedding_feature in zip(input[:len(self.args.CAT_COLUMN)], self.embedding_features):
             value = _embedding_feature(_input)
             embed_features.append(value)
 
-        embed_features = [embed_interaction] + embed_features
+        con_features = [feature.unsqueeze(-1) for feature in input[len(self.args.CAT_COLUMN):-4]]
+        # print(con_features[0].size())
+        # print(embed_features[0].size())
+        # print(embed_interaction.size())
+
+        embed_features = [embed_interaction] + embed_features + con_features
+        
         embed = torch.cat(embed_features, 2)
         
 

@@ -42,6 +42,8 @@ def run(args, train_data, valid_data):
     
     print(f"\n{model_dir}/exp_config.json is saved!\n")
 
+    print(f'categorical feature : {args.CAT_COLUMN}')
+    print(f'continuous feature : {args.CON_COLUMN}')
     model = get_model(args)
     optimizer = get_optimizer(model, args)
     scheduler = get_scheduler(optimizer, args)
