@@ -42,9 +42,19 @@ def parse_args(mode="train"):
 
     parser.add_argument("--objective", default='binary', type=str)
     parser.add_argument("--verbose_eval", default=100, type=int)
-    parser.add_argument("--num_boost_round", default=1000, type=int)
-    parser.add_argument("--early_stopping_rounds", default=10, type=int)
-    parser.add_argument("--max_depth", default=10, type=int)
+    parser.add_argument("--num_boost_round", default=500, type=int)
+    parser.add_argument("--early_stopping_rounds", default=100, type=int)
+    parser.add_argument("--max_depth", default=-1, type=int)
+    parser.add_argument("--num_leaves", default=20, type=int)
+    parser.add_argument("--min_data_in_leaf", default=200, type=int)
+    parser.add_argument("--lambda_l1", default=0, type=int)
+    parser.add_argument("--lambda_l2", default=0, type=int)
+    parser.add_argument("--min_gain_to_split", default=0, type=float)
+    parser.add_argument("--bagging_fraction", default=0.2, type=float)
+    parser.add_argument("--feature_fraction", default=0.2, type=float)
+    parser.add_argument("--bagging_freq", default=0, type=int)
+    parser.add_argument("--path_smooth", default=1e-8, type=float)
+    parser.add_argument("--max_bin", default=255, type=int)
 
     # Sweep 파라미터
     parser.add_argument("--sweep", action="store_true", help="sweep type")

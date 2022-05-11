@@ -4,6 +4,7 @@ import os
 import numpy as np
 import torch
 import wandb
+import json
 
 from .criterion import get_criterion
 from .dataloader import get_loaders, data_augmentation
@@ -29,6 +30,20 @@ def run(args, train_data, valid_data):
     )
     args.warmup_steps = args.total_steps // 10
 
+    print(args)
+    model_dir = os.path.join(args.model_dir, args.model)
+    os.makedirs(model_dir, exist_ok=True)
+    json.dump(
+        vars(args),
+        open(f"{model_dir}/exp_config.json", "w"),
+        indent=2,
+        ensure_ascii=False,
+    )
+    
+    print(f"\n{model_dir}/exp_config.json is saved!\n")
+
+    print(f'categorical feature : {args.CAT_COLUMN}')
+    print(f'continuous feature : {args.CON_COLUMN}')
     model = get_model(args)
     optimizer = get_optimizer(model, args)
     scheduler = get_scheduler(optimizer, args)
@@ -83,6 +98,8 @@ def run(args, train_data, valid_data):
         # scheduler
         if args.scheduler == "plateau":
             scheduler.step(best_auc)
+        else:
+            scheduler.step()
 
 
 def train(train_loader, model, optimizer, scheduler, args):
@@ -94,7 +111,7 @@ def train(train_loader, model, optimizer, scheduler, args):
     for step, batch in enumerate(train_loader):
         input = process_batch(batch, args)
         preds = model(input)
-        targets = input[3]  # correct
+        targets = input[-4]  # correct
 
         loss = compute_loss(preds, targets)
         update_params(loss, model, optimizer, scheduler, args)
@@ -136,7 +153,7 @@ def validate(valid_loader, model, args):
         input = process_batch(batch, args)
 
         preds = model(input)
-        targets = input[3]  # correct
+        targets = input[-4]  # correct
 
         # predictions
         preds = preds[:, -1]
@@ -217,8 +234,8 @@ def get_model(args):
         args.Tfixup = False
         model = LastQuery(args, post_pad=False)
 
-    if args.model == 'last_query_post':
-        model = LastQuery(args, post_pad=True)
+    # if args.model == 'last_query_post':
+    #     model = LastQuery(args, post_pad=True)
 
     if args.model == 'tfixup_last_query':
         args.Tfixup = True
@@ -238,7 +255,11 @@ def get_model(args):
 # 배치 전처리
 def process_batch(batch, args):
 
-    test, question, tag, correct, mask = batch
+    features = batch[:-2]
+    correct = batch[-2]
+    mask = batch[-1]
+
+    # test, question, tag, correct, mask = batch
 
     # change to float
     mask = mask.type(torch.FloatTensor)
@@ -253,9 +274,10 @@ def process_batch(batch, args):
     interaction = (interaction * interaction_mask).to(torch.int64)
 
     #  test_id, question_id, tag , 모두 0부터 시작하는걸 1씩 더해주어 유의미한 값으로 만듦
-    test = ((test + 1) * mask).to(torch.int64)
-    question = ((question + 1) * mask).to(torch.int64)
-    tag = ((tag + 1) * mask).to(torch.int64)
+    features = [((feature + 1) * mask).to(torch.int64) for feature in features]
+    # test = ((test + 1) * mask).to(torch.int64)
+    # question = ((question + 1) * mask).to(torch.int64)
+    # tag = ((tag + 1) * mask).to(torch.int64)
 
     # gather index
     # 마지막 sequence만 사용하기 위한 index
@@ -264,17 +286,21 @@ def process_batch(batch, args):
 
     # device memory로 이동
 
-    test = test.to(args.device)
-    question = question.to(args.device)
+    # test = test.to(args.device)
+    # question = question.to(args.device)
+    # tag = tag.to(args.device)
+    features = [feature.to(args.device) for feature in features]
 
-    tag = tag.to(args.device)
     correct = correct.to(args.device)
     mask = mask.to(args.device)
 
     interaction = interaction.to(args.device)
     gather_index = gather_index.to(args.device)
 
-    return (test, question, tag, correct, mask, interaction, gather_index)
+    output = tuple(features + [correct, mask, interaction, gather_index])
+
+    return output
+    # return (test, question, tag, correct, mask, interaction, gather_index)
 
 
 # loss계산하고 parameter update!
@@ -297,8 +323,8 @@ def update_params(loss, model, optimizer, scheduler, args):
     loss.backward()
     # update 정도를 조절
     torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip_grad)
-    if args.scheduler == "linear_warmup":
-        scheduler.step()
+    # if args.scheduler == "linear_warmup":
+    #     scheduler.step()
     optimizer.step()
     optimizer.zero_grad()
 

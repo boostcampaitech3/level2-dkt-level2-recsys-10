@@ -36,6 +36,7 @@ def run(args, train_data, valid_data, X_valid, y_valid, preprocess):
         #########################
 
         model = lgb.LGBMClassifier(
+<<<<<<< HEAD
         learning_rate = args.learning_rate,
         n_estimators  = args.num_boost_round,
         max_depth = args.max_depth,
@@ -46,11 +47,40 @@ def run(args, train_data, valid_data, X_valid, y_valid, preprocess):
             X = X_train[preprocess.FEATS], 
             y = y_train,
             eval_set = [(X_train[preprocess.FEATS],y_train),(X_valid[preprocess.FEATS],y_valid)],
+=======
+            objective = 'binary',
+            learning_rate = args.learning_rate,
+            n_estimators = args.num_boost_round,
+            max_depth = args.max_depth,
+            num_leaves = args.num_leaves,
+            min_data_in_leaf = args.min_data_in_leaf,
+            lambda_l1 = args.lambda_l1,
+            lambda_l2 = args.lambda_l2,
+            min_gain_to_split = args.min_gain_to_split,
+            bagging_fraction = args.bagging_fraction,
+            feature_fraction = args.feature_fraction,
+            bagging_freq  = args.bagging_freq,
+            path_smooth = args.path_smooth,
+            max_bin= args.max_bin
+        )
+
+        model.fit(
+            X = X_train, 
+            y = y_train,
+            eval_set = [(X_train,y_train),(X_valid,y_valid)],
+>>>>>>> experiment#59
             eval_names=['train','validation'],
             eval_metric = custom_loss,
             verbose=args.verbose_eval,
             early_stopping_rounds=args.early_stopping_rounds
         )
+
+        # checking Output
+        # preds = model.predict_proba(X_valid)[:,1]
+        # print(preds[:100])
+        # acc = accuracy_score(y_valid, np.where(preds >= 0.5, 1, 0))
+        # auc = roc_auc_score(y_valid, preds)
+        # print(f'VALID AUC : {auc} ACC : {acc}\n')
 
     elif args.model == 'catboost':
         custom_loss = ["AUC", "Accuracy"]
@@ -71,18 +101,24 @@ def run(args, train_data, valid_data, X_valid, y_valid, preprocess):
             verbose=args.verbose_eval)
 
     
+<<<<<<< HEAD
     args.auc, acc = model_predict(args, model, X_valid, y_valid)
     print("------args.auc--------")
     print(args.auc)
     print(str(args.auc)[2:6])
     save_model(args, model)
+=======
+    # auc, acc = model_predict(args, model, X_valid, y_valid)
+    # args.auc = auc
+    
+>>>>>>> experiment#59
 
     if args.model == 'lightgbm':
         eval_result = model.evals_result_
         list_run = ['train', 'validation']
         custom_loss = ["auc", "acc"]
-
         loop_len = len(eval_result["validation"]["auc"])
+
         for i in range(0, loop_len):
             wandb.log({
                 "train_loss" : eval_result[list_run[0]]['binary_logloss'][i],
@@ -109,22 +145,23 @@ def run(args, train_data, valid_data, X_valid, y_valid, preprocess):
                 "itration" : i
             })
 
+    args.auc = eval_result[list_run[1]][custom_loss[0]][i]
+    save_model(args, model)
+
 def lgb_acc(y_true, y_pred):
     y_pred = np.where(y_pred >= 0.5, 1., 0.)   
     return ('acc', np.mean(y_pred==y_true), False)
     
-def custom_acc(y_pred, dataset):
-    # https://lightgbm.readthedocs.io/en/latest/pythonapi/lightgbm.train.html#lightgbm.train
-    y_true = dataset.get_label()
-    y_pred = np.where(y_pred >= 0.5, 1., 0.)
+# def custom_acc(y_pred, dataset):
+#     # https://lightgbm.readthedocs.io/en/latest/pythonapi/lightgbm.train.html#lightgbm.train
+#     y_true = dataset.get_label()
+#     y_pred = np.where(y_pred >= 0.5, 1., 0.)
     
-    return ('acc', np.mean(y_pred==y_true), False)
+#     return ('acc', np.mean(y_pred==y_true), False)
 
 def model_predict(args, model, X_valid, y_valid):
     if args.model == 'lightgbm':
-        preds = model.predict(X_valid)
-        print("------preds-----")
-        print(preds)
+        preds = model.predict_proba(X_valid)[:, 1]
     elif args.model == 'catboost':
         preds = model.predict(X_valid, prediction_type='Probability')[:, 1]
         
@@ -137,10 +174,7 @@ def model_predict(args, model, X_valid, y_valid):
 
 def inference(args, test_data):    
     model = load_model(args)
-    # total_preds = model.predict(test_data)
     total_preds = model.predict_proba(test_data)[:,1]
-
-
     write_path = os.path.join(args.output_dir, "submission.csv")
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
@@ -164,6 +198,7 @@ def load_model(args):
     return model
 
 def save_model(args, model):
-    model_path = os.path.join(args.model_dir, str(args.auc)[2:6] + args.model_name)
+
+    model_path = os.path.join(args.model_dir, f'model_{args.auc:.4f}.pkl')
     print("Saving Model from:", model_path)
     joblib.dump(model, model_path)

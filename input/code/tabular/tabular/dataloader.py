@@ -213,10 +213,10 @@ class Preprocess:
             'KnowledgeTag': 'int16'
             }          
         test_csv_file_path = os.path.join(self.args.data_dir, test_file_name)
-        test_df = pd.read_csv(test_csv_file_path,dtype=dtype, parse_dates=['Timestamp'])
+        test_df = pd.read_csv(test_csv_file_path, dtype=dtype, parse_dates=['Timestamp'])
         
         train_csv_file_path = os.path.join(self.args.data_dir, train_file_name)
-        train_df = pd.read_csv(train_csv_file_path,dtype=dtype, parse_dates=['Timestamp'])
+        train_df = pd.read_csv(train_csv_file_path, dtype=dtype, parse_dates=['Timestamp'])
         self.train_userID = train_df['userID'].unique().tolist() 
 
         df = pd.concat([train_df, test_df], axis= 0)
