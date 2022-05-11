@@ -14,3 +14,8 @@ def setSeeds(seed=42):
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
+
+def get_feats_sweep_dict(feats:list) -> dict:
+    feats_dict = {feat:{'values':[True,False]} for feat in feats}
+
+    return feats_dict
