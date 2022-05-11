@@ -7,7 +7,7 @@ import torch
 def prepare_dataset(device, basepath, verbose=True, logger=None):
     data = load_data(basepath)
     train_data, valid_data, test_data = separate_data(data)
-    id2index = indexing_data(data)
+    id2index, side_tuple, nums_tuple = indexing_data(data)
     train_data_proc = process_data(train_data, id2index, device)
     valid_data_proc = process_data(valid_data, id2index, device)
     test_data_proc = process_data(test_data, id2index, device)
@@ -16,7 +16,7 @@ def prepare_dataset(device, basepath, verbose=True, logger=None):
         print_data_stat(train_data, "Train", logger=logger)
         print_data_stat(test_data, "Test", logger=logger)
 
-    return train_data_proc, valid_data_proc, test_data_proc, len(id2index)
+    return train_data_proc, valid_data_proc, test_data_proc, side_tuple, nums_tuple, len(id2index)
 
 
 def load_data(basepath):
@@ -43,18 +43,36 @@ def separate_data(data):
 
 
 def indexing_data(data):
-    userid, itemid = (
+    userid, itemid, testid, tagid = (
         sorted(list(set(data.userID))),
         sorted(list(set(data.assessmentItemID))),
+        sorted(list(set(data.testId))),
+        sorted(list(set(data.KnowledgeTag)))
     )
-    n_user, n_item = len(userid), len(itemid)
+    n_user, n_item, n_test, n_tag = len(userid), len(itemid), len(testid), len(tagid)
 
     userid_2_index = {v: i for i, v in enumerate(userid)}
     # user_id와 겹치지 않게 item_id 만들기
     itemid_2_index = {v: i + n_user for i, v in enumerate(itemid)}
     id_2_index = dict(userid_2_index, **itemid_2_index)
 
-    return id_2_index
+    ##### side information 활용하기 #####
+    side_info_df = data[['assessmentItemID', 'testId', 'KnowledgeTag']].groupby("assessmentItemID").head(1).copy()
+    testid_2_index = {v: i for i, v in enumerate(testid)}
+    tagid_2_index = {v: i for i, v in enumerate(tagid)}
+
+    side_info_df['assessmentItemID'] = side_info_df['assessmentItemID'].apply(lambda x: itemid_2_index[x])
+    side_info_df['testId'] = side_info_df['testId'].apply(lambda x: testid_2_index[x])
+    side_info_df['KnowledgeTag'] = side_info_df['KnowledgeTag'].apply(lambda x: tagid_2_index[x])
+    side_info_df = side_info_df.sort_values(['assessmentItemID', 'testId', 'KnowledgeTag'])
+    
+    testid_sorted_list = side_info_df['testId'].tolist()
+    tagid_sorted_list = side_info_df['KnowledgeTag'].tolist()
+
+    side_tuple = (testid_sorted_list, tagid_sorted_list)
+    nums_tuple = (n_user, n_item, n_test, n_tag)
+
+    return id_2_index, side_tuple, nums_tuple
 
 
 def process_data(data, id_2_index, device):
