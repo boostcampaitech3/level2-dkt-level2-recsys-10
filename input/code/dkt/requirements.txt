@@ -7,3 +7,4 @@ transformers
 ipykernel
 lightgbm
 matplotlib
+catboost
