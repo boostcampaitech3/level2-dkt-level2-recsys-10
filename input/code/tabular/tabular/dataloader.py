@@ -190,18 +190,33 @@ class Preprocess:
         df['tag_accessmentID_mul'] = df['tag_mean'] * df['accessment_mean']
         ###################################
 
+        ###################################
+        # FE. 14 : 문제별 앞에 문제인지 뒤에문제인지 problem_mid_cat (catagory)
+        df['problem_num'] = df['assessmentItemID'].str[-3:]
+
+        testId_group = df.loc[:, ['testId', 'problem_num']]
+        testId_group = testId_group.drop_duplicates()
+        testId_group = testId_group.groupby('testId').agg('count').reset_index()
+        testId_group.columns = ['testId', 'problem_cnt']
+
+        testId_group['problem_cnt_mid'] = testId_group['problem_cnt'].apply(lambda x : x//2)
+        df = pd.merge(df, testId_group, on=['testId'], how="left")
+        df['problem_num'] = df['problem_num'].apply(lambda x : int(x))
+        df['problem_mid_cat']  = df.apply(lambda x : 0 if int(x.problem_num) < x.problem_cnt_mid else 1, axis = 1)
+        ###################################
 
         # (2) FEATS는 FE가 직접적으로 작동이 되는 부분에서 언급되는것이 좋을것 같다.
         self.FEATS = ['KnowledgeTag', 'assessmentItemID', 'user_correct_answer', 'user_total_answer', 
             'user_acc', 'test_mean', 'test_sum', 'tag_mean','tag_sum',
             'elapsed','main_ca_correct_answer','main_ca_total_answer','main_ca_acc','elapsed_test',
-            'accessment_mean', 'accessment_sum', 'ka_accessment_mean', 'ka_accessment_sum', 'mean_time_second', 'tag_accessmentID_mul']
+            'accessment_mean', 'accessment_sum', 'ka_accessment_mean', 'ka_accessment_sum', 
+            'mean_time_second', 'tag_accessmentID_mul','problem_mid_cat']
             # 'userID', 'user_tag_cnt']
 
 
         # TODO catboost는 Categorical columns name을 지정해줘야한다.
         #self.CATS = ['KnowledgeTag']
-        self.CATS = ['KnowledgeTag', 'assessmentItemID']
+        self.CATS = ['KnowledgeTag', 'assessmentItemID','problem_mid_cat']
 
         df.sort_values(by=['userID','Timestamp'], inplace=True)
         return df
