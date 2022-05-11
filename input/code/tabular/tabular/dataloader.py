@@ -186,7 +186,7 @@ class Preprocess:
         ###################################
 
         ###################################
-        # FE. 13 : tag 정답률 * accessmentItemID 정답률
+        # FE. 13 : tag 정답률 * accessmentItemID 정답률 => 성능 상승
         df['tag_accessmentID_mul'] = df['tag_mean'] * df['accessment_mean']
         ###################################
 
@@ -195,7 +195,7 @@ class Preprocess:
         self.FEATS = ['KnowledgeTag', 'assessmentItemID', 'user_correct_answer', 'user_total_answer', 
             'user_acc', 'test_mean', 'test_sum', 'tag_mean','tag_sum',
             'elapsed','main_ca_correct_answer','main_ca_total_answer','main_ca_acc','elapsed_test',
-            'accessment_mean', 'accessment_sum', 'ka_accessment_mean', 'ka_accessment_sum', 'mean_time_second']
+            'accessment_mean', 'accessment_sum', 'ka_accessment_mean', 'ka_accessment_sum', 'mean_time_second', 'tag_accessmentID_mul']
             # 'userID', 'user_tag_cnt']
 
 
