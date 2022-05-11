@@ -11,8 +11,6 @@ import lightgbm as lgb
 from catboost import Pool
 from sklearn.preprocessing import LabelEncoder
 
-import swifter
-
 class Preprocess:
     def __init__(self, args):
         self.args = args

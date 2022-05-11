@@ -33,7 +33,6 @@ def run(args, train_data, valid_data, X_valid, y_valid, preprocess):
 
         X_train = train_data
         y_train = valid_data
-        #########################
 
         model = lgb.LGBMClassifier(
             objective = 'binary',
@@ -118,8 +117,6 @@ def run(args, train_data, valid_data, X_valid, y_valid, preprocess):
 
     elif args.model == 'catboost':
         eval_result = model.get_evals_result()
-        print("------eval_result------")
-        print(eval_result['validation'].keys())
         list_run = ['learn', 'validation']
         loop_len = len(eval_result["validation"]["AUC"])
 
