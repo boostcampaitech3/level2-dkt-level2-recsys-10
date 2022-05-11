@@ -71,7 +71,10 @@ def run(args, train_data, valid_data, X_valid, y_valid, preprocess):
             verbose=args.verbose_eval)
 
     
-    # auc, acc = model_predict(args, model, X_valid, y_valid)
+    args.auc, acc = model_predict(args, model, X_valid, y_valid)
+    print("------args.auc--------")
+    print(args.auc)
+    print(str(args.auc)[2:6])
     save_model(args, model)
 
     if args.model == 'lightgbm':
@@ -120,8 +123,11 @@ def custom_acc(y_pred, dataset):
 def model_predict(args, model, X_valid, y_valid):
     if args.model == 'lightgbm':
         preds = model.predict(X_valid)
+        print("------preds-----")
+        print(preds)
     elif args.model == 'catboost':
         preds = model.predict(X_valid, prediction_type='Probability')[:, 1]
+        
 
     acc = accuracy_score(y_valid, np.where(preds >= 0.5, 1, 0))
     auc = roc_auc_score(y_valid, preds)
@@ -158,8 +164,6 @@ def load_model(args):
     return model
 
 def save_model(args, model):
-
-    model_path = os.path.join(args.model_dir, args.model_name)
+    model_path = os.path.join(args.model_dir, str(args.auc)[2:6] + args.model_name)
     print("Saving Model from:", model_path)
-
     joblib.dump(model, model_path)

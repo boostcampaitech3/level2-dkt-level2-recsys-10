@@ -43,7 +43,7 @@ def parse_args(mode="train"):
     parser.add_argument("--objective", default='binary', type=str)
     parser.add_argument("--verbose_eval", default=100, type=int)
     parser.add_argument("--num_boost_round", default=1000, type=int)
-    parser.add_argument("--early_stopping_rounds", default=200, type=int)
+    parser.add_argument("--early_stopping_rounds", default=10, type=int)
     parser.add_argument("--max_depth", default=10, type=int)
 
     # Sweep 파라미터
