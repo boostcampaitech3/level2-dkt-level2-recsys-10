@@ -1,3 +1,4 @@
+from curses import use_default_colors
 import os
 import random
 
@@ -14,3 +15,27 @@ def setSeeds(seed=42):
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
+
+def get_feats_sweep_dict(feats:list) -> dict:
+    feats_dict = {feat:{'values':[True,False]} for feat in feats}
+
+    return feats_dict
+
+def get_wandb_config(wandb_config):
+    feats = wandb_config['FEATS']
+    use_feats = []
+    for feat,v in wandb_config.items():
+        if feat in feats and v:
+            use_feats.append(feat)
+    return use_feats
+
+def get_cate_cols(preprocess):
+    feats=preprocess.FEATS
+
+    cate_cols=preprocess.CATS
+    selected_cate_cols = []
+    for cate in cate_cols:
+        if cate in feats:
+            selected_cate_cols.append(cate)
+
+    return selected_cate_cols

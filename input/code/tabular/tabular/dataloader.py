@@ -186,7 +186,6 @@ class Preprocess:
         self.CATS = ['KnowledgeTag', 'assessmentItemID']
 
         df.sort_values(by=['userID','Timestamp'], inplace=True)
-        print(df)
         return df
 
     def load_data_from_file(self, test_file_name, train_file_name=None, is_train = True):
@@ -203,8 +202,8 @@ class Preprocess:
         self.train_userID = train_df['userID'].unique().tolist() 
 
         df = pd.concat([train_df, test_df], axis= 0)
-        df = self.__feature_engineering(df)
-        df = self.__preprocessing(df, is_train)
+        df = self.__feature_engineering(df) # FEATS 결정
+        df = self.__preprocessing(df, is_train) # 인코딩/타입 결정
 
         # seperate test and valid data
         self.test_index = df.answerCode == -1
