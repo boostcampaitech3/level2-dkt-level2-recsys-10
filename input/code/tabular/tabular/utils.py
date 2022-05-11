@@ -28,3 +28,14 @@ def get_wandb_config(wandb_config):
         if feat in feats and v:
             use_feats.append(feat)
     return use_feats
+
+def get_cate_cols(preprocess):
+    feats=preprocess.FEATS
+
+    cate_cols=preprocess.CATS
+    selected_cate_cols = []
+    for cate in cate_cols:
+        if cate in feats:
+            selected_cate_cols.append(cate)
+
+    return selected_cate_cols

@@ -12,22 +12,24 @@ from sklearn.metrics import accuracy_score
 import joblib
 import matplotlib.pyplot as plt
 
-from .utils import get_wandb_config
+from .utils import get_cate_cols, get_wandb_config, get_cate_cols
 
 def run(args, train_data, valid_data, X_valid, y_valid, preprocess):
+    if args.sweep_feats:
+    # DataLoad 시에 Feature를 변경함
+        preprocess.FEATS = get_wandb_config(args)
+        train_data = preprocess.get_train_data()
+        valid_data = preprocess.get_valid_data()
+        train_data, valid_data, X_valid, y_valid = preprocess.convert_dataset(train_data, valid_data)
+        X_train = train_data
+        y_train = valid_data
+        preprocess.CATS = get_cate_cols(preprocess)
+        print('********************preprocess.FEATS after*************************') 
+        print(preprocess.FEATS)
+        print(preprocess.CATS)
+
     if args.model == 'lightgbm':
         custom_loss = ["auc", lgb_acc]
-
-        if args.sweep_feats:
-            # DataLoad 시에 Feature를 변경함
-            preprocess.FEATS = get_wandb_config(args)
-            train_data = preprocess.get_train_data()
-            valid_data = preprocess.get_valid_data()
-            train_data, valid_data, X_valid, y_valid = preprocess.convert_dataset(train_data, valid_data)
-            X_train = train_data
-            y_train = valid_data
-            print('********************preprocess.FEATS after*************************') 
-            print(preprocess.FEATS)
 
         X_train = train_data
         y_train = valid_data
@@ -63,7 +65,7 @@ def run(args, train_data, valid_data, X_valid, y_valid, preprocess):
             train_data, 
             eval_set=valid_data, 
             use_best_model=True, 
-            # cat_features = # TODO category feature 목록 넣기
+            # cat_features = preprocess.CATS,# TODO category feature 목록 넣기
             early_stopping_rounds=args.early_stopping_rounds, 
             verbose=args.verbose_eval)
 
