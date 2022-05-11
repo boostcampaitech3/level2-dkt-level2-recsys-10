@@ -12,42 +12,45 @@ from sklearn.metrics import accuracy_score
 import joblib
 import matplotlib.pyplot as plt
 
-def run(args, train_data, valid_data, X_valid, y_valid):
-    if args.model == 'lightgbm':
-        custom_loss = ["auc", lgb_acc]
-        # data 이름 변경
+from .utils import get_cate_cols, get_wandb_config, get_cate_cols
+
+def run(args, train_data, valid_data, X_valid, y_valid, preprocess):
+    if args.sweep_feats:
+    # DataLoad 시에 Feature를 변경함
+        preprocess.FEATS = get_wandb_config(args)
+        train_data = preprocess.get_train_data()
+        valid_data = preprocess.get_valid_data()
+        train_data, valid_data, X_valid, y_valid = preprocess.convert_dataset(train_data, valid_data)
         X_train = train_data
         y_train = valid_data
+        preprocess.CATS = get_cate_cols(preprocess)
+        print('********************preprocess.FEATS after*************************') 
+        print(preprocess.FEATS)
+        print(preprocess.CATS)
+
+    if args.model == 'lightgbm':
+        custom_loss = ["auc", lgb_acc]
+
+        X_train = train_data
+        y_train = valid_data
+        #########################
 
         model = lgb.LGBMClassifier(
         learning_rate = args.learning_rate,
         n_estimators  = args.num_boost_round,
-        max_depth = args.max_depth
+        max_depth = args.max_depth,
+        path_smooth = 0.10
         )
 
         model.fit(
-            X = X_train[args.FEATS], 
+            X = X_train[preprocess.FEATS], 
             y = y_train,
-            eval_set = [(X_train[args.FEATS],y_train),(X_valid[args.FEATS],y_valid)],
+            eval_set = [(X_train[preprocess.FEATS],y_train),(X_valid[preprocess.FEATS],y_valid)],
             eval_names=['train','validation'],
             eval_metric = custom_loss,
             verbose=args.verbose_eval,
             early_stopping_rounds=args.early_stopping_rounds
         )
-        # lgb.plot_importance(model)
-        # fig, ax = plt.subplots(figsize=(10, 12))
-        ax = plt.figure(figsize=(16, 10))
-        # ax.ytick(labelsize = 5)
-        ax = lgb.plot_importance(model, max_num_features=len(args.FEATS), importance_type='split')
-        ax.set(title=f'Feature Importance (split)',
-            xlabel='Feature Importance',
-            ylabel='Features')
-        
-        
-        ax.figure.savefig(f'./fi_split1.png', dpi=300)
-
-        # lgb.plot_importance(model)
-        # plt.show()
 
     elif args.model == 'catboost':
         custom_loss = ["AUC", "Accuracy"]
@@ -63,7 +66,7 @@ def run(args, train_data, valid_data, X_valid, y_valid):
             train_data, 
             eval_set=valid_data, 
             use_best_model=True, 
-            # cat_features = # TODO category feature 목록 넣기
+            # cat_features = preprocess.CATS,# TODO category feature 목록 넣기
             early_stopping_rounds=args.early_stopping_rounds, 
             verbose=args.verbose_eval)
 
@@ -89,6 +92,8 @@ def run(args, train_data, valid_data, X_valid, y_valid):
 
     elif args.model == 'catboost':
         eval_result = model.get_evals_result()
+        print("------eval_result------")
+        print(eval_result['validation'].keys())
         list_run = ['learn', 'validation']
         loop_len = len(eval_result["validation"]["AUC"])
 
