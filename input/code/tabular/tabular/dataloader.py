@@ -11,8 +11,6 @@ import lightgbm as lgb
 from catboost import Pool
 from sklearn.preprocessing import LabelEncoder
 
-import swifter
-
 class Preprocess:
     def __init__(self, args):
         self.args = args
@@ -34,7 +32,7 @@ class Preprocess:
         np.save(le_path, encoder.classes_)
 
     def __preprocessing(self, df, is_train=True):
-        cate_cols = ["assessmentItemID", "testId", "KnowledgeTag",'problem_mid_cat', 'accessment_mean_ca']
+        cate_cols = self.CATS #["assessmentItemID", "testId", "KnowledgeTag",'problem_mid_cat', 'accessment_mean_ca']
 
         if not os.path.exists(self.args.asset_dir):
             os.makedirs(self.args.asset_dir)
