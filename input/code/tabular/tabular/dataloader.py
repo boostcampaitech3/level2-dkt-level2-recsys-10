@@ -240,18 +240,21 @@ class Preprocess:
             }          
         test_csv_file_path = os.path.join(self.args.data_dir, test_file_name)
         test_df = pd.read_csv(test_csv_file_path, dtype=dtype, parse_dates=['Timestamp'])
-        
+        test_userids = test_df.userID.unique()
+
         train_csv_file_path = os.path.join(self.args.data_dir, train_file_name)
         train_df = pd.read_csv(train_csv_file_path, dtype=dtype, parse_dates=['Timestamp'])
         self.train_userID = train_df['userID'].unique().tolist() 
 
         df = pd.concat([train_df, test_df], axis= 0)
-        df = self.__feature_engineering(df) # FEATS 결정
+        df = self.__feature_engineering(df) # FEATS 결정 
         df = self.__preprocessing(df, is_train) # 인코딩/타입 결정
 
         # seperate test and valid data
+
         self.test_index = df.answerCode == -1
         self.valid_index = np.array(self.test_index[1:].tolist() + [False])
+        self.valid_dataset = df[df['userID'].isin(test_userids)].query('answerCode != -1').groupby(['userID', 'testId']).sample(1).groupby('userID').sample(3)
 
         self.args.n_questions = len(
             np.load(os.path.join(self.args.asset_dir, "assessmentItemID_classes.npy"))
@@ -268,9 +271,10 @@ class Preprocess:
     def load_train_data(self, test_file_name, train_file_name):
         data = self.load_data_from_file(test_file_name, train_file_name)
         # train data에는 test data의 유저에 대한 정보가 포함되면 안되므로(양심상, 규제는 완화된 것으로 보이기때문에 이 부분은 따로 수정해줄 필요도 있을 것 같다)
-        self.train_data = data.merge(pd.Series(self.train_userID, name='userID'), how = 'inner', on = 'userID')
-        # self.train_data = data[self.valid_index == False].query("answerCode != -1")
-        self.valid_data = data[self.valid_index].query("answerCode != -1")
+        # self.train_data = data.merge(pd.Series(self.train_userID, name='userID'), how = 'inner', on = 'userID')
+        self.train_data = data[self.valid_index == False].query("answerCode != -1")
+        # self.valid_data = data[self.valid_index].query("answerCode != -1")
+        self.valid_data = data.merge(self.valid_dataset, on = list(self.valid_dataset.columns), how='inner')
 
     def load_test_data(self, test_file_name, train_file_name):
         data = self.load_data_from_file(test_file_name, train_file_name, is_train=False)
