@@ -14,16 +14,17 @@ import matplotlib.pyplot as plt
 
 from .utils import get_cate_cols, get_wandb_config, get_cate_cols
 
-def run(args, train_data, valid_data, X_valid, y_valid, preprocess):
+def run(args, train_data, valid_data, X_valid, y_valid, preprocess, cate):
     if args.sweep_feats:
     # DataLoad 시에 Feature를 변경함
         preprocess.FEATS = get_wandb_config(args)
         train_data = preprocess.get_train_data()
         valid_data = preprocess.get_valid_data()
+        preprocess.CATS = get_cate_cols(preprocess, cate)
         train_data, valid_data, X_valid, y_valid = preprocess.convert_dataset(train_data, valid_data)
         X_train = train_data
         y_train = valid_data
-        preprocess.CATS = get_cate_cols(preprocess)
+        
         print('********************preprocess.FEATS after*************************') 
         print(preprocess.FEATS)
         print(preprocess.CATS)
@@ -40,16 +41,16 @@ def run(args, train_data, valid_data, X_valid, y_valid, preprocess):
             learning_rate = args.learning_rate,
             n_estimators = args.num_boost_round,
             max_depth = args.max_depth,
-            num_leaves = args.num_leaves,
-            min_data_in_leaf = args.min_data_in_leaf,
-            lambda_l1 = args.lambda_l1,
-            lambda_l2 = args.lambda_l2,
-            min_gain_to_split = args.min_gain_to_split,
-            bagging_fraction = args.bagging_fraction,
-            feature_fraction = args.feature_fraction,
-            bagging_freq  = args.bagging_freq,
-            path_smooth = args.path_smooth,
-            max_bin= args.max_bin
+            # num_leaves = args.num_leaves,
+            # min_data_in_leaf = args.min_data_in_leaf,
+            # lambda_l1 = args.lambda_l1,
+            # lambda_l2 = args.lambda_l2,
+            # min_gain_to_split = args.min_gain_to_split,
+            # bagging_fraction = args.bagging_fraction,
+            # feature_fraction = args.feature_fraction,
+            # bagging_freq  = args.bagging_freq,
+            # path_smooth = args.path_smooth,
+            # max_bin= args.max_bin
         )
 
         model.fit(
@@ -77,14 +78,14 @@ def run(args, train_data, valid_data, X_valid, y_valid, preprocess):
             learning_rate=args.learning_rate, # TODO lr 관련 파라미터 확인하기
             task_type='GPU', # TODO GPU 사용 가능할 때만 사용하록 if 문으로 변경
             custom_loss = custom_loss,
-            max_depth = args.max_depth,
-            bagging_temperature = args.bagging_temperature,
-            random_strength = args.random_strength,
-            colsample_bylevel = args.colsample_bylevel,
-            l2_leaf_reg = args.l2_leaf_reg,
-            min_child_samples = args.min_child_samples,
-            max_bin = args.max_bin,
-            od_type = args.od_type
+            # max_depth = args.max_depth,
+            # bagging_temperature = args.bagging_temperature,
+            # random_strength = args.random_strength,
+            # colsample_bylevel = args.colsample_bylevel,
+            # l2_leaf_reg = args.l2_leaf_reg,
+            # min_child_samples = args.min_child_samples,
+            # max_bin = args.max_bin,
+            # od_type = args.od_type
 
         )
         model.fit(
