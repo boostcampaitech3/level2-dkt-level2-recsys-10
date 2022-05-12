@@ -104,7 +104,7 @@ else:
         'bagging_temperature':{
             'distribution': 'uniform',
             'min': 0.01,
-            'max': 100
+            'max': 10
             },
         
         'random_strength':{
@@ -122,7 +122,7 @@ else:
         'l2_leaf_reg':{
             'distribution': 'uniform',
             'min': 1e-8,
-            'max': 3e-5
+            'max': 1e-5
             },
 
         'min_child_samples':{
