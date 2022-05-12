@@ -22,7 +22,17 @@ def run(args, train_data, valid_data, X_valid, y_valid):
             objective = 'binary',
             learning_rate = args.learning_rate,
             n_estimators = args.num_boost_round,
-            max_depth = args.max_depth
+            max_depth = args.max_depth,
+            num_leaves = args.num_leaves,
+            min_data_in_leaf = args.min_data_in_leaf,
+            lambda_l1 = args.lambda_l1,
+            lambda_l2 = args.lambda_l2,
+            min_gain_to_split = args.min_gain_to_split,
+            bagging_fraction = args.bagging_fraction,
+            feature_fraction = args.feature_fraction,
+            bagging_freq  = args.bagging_freq,
+            path_smooth = args.path_smooth,
+            max_bin= args.max_bin
         )
 
         model.fit(
@@ -62,7 +72,8 @@ def run(args, train_data, valid_data, X_valid, y_valid):
 
     
     # auc, acc = model_predict(args, model, X_valid, y_valid)
-    # save_model(args, model)
+    # args.auc = auc
+    
 
     if args.model == 'lightgbm':
         eval_result = model.evals_result_
@@ -94,6 +105,9 @@ def run(args, train_data, valid_data, X_valid, y_valid):
                 "itration" : i
             })
 
+    args.auc = eval_result[list_run[1]][custom_loss[0]][i]
+    save_model(args, model)
+
 def lgb_acc(y_true, y_pred):
     y_pred = np.where(y_pred >= 0.5, 1., 0.)   
     return ('acc', np.mean(y_pred==y_true), False)
@@ -107,7 +121,7 @@ def lgb_acc(y_true, y_pred):
 
 def model_predict(args, model, X_valid, y_valid):
     if args.model == 'lightgbm':
-        preds = model.predict(X_valid)
+        preds = model.predict_proba(X_valid)[:, 1]
     elif args.model == 'catboost':
         preds = model.predict(X_valid, prediction_type='Probability')[:, 1]
 
@@ -144,7 +158,7 @@ def load_model(args):
 
 def save_model(args, model):
 
-    model_path = os.path.join(args.model_dir, args.model_name)
+    model_path = os.path.join(args.model_dir, f'model_{args.auc:.4f}.pkl')
     print("Saving Model from:", model_path)
 
     joblib.dump(model, model_path)
