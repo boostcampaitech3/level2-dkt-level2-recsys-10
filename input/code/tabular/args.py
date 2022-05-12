@@ -62,7 +62,6 @@ def parse_args(mode="train"):
     parser.add_argument("--max_depth", default=6, type=int)
     parser.add_argument("--bagging_temperature", default=1, type=float)
     parser.add_argument("--random_strength", default=1, type=int)
-    parser.add_argument("--colsample_bylevel", default=None, type=float)
     parser.add_argument("--l2_leaf_reg", default=3.0, type=float)
     parser.add_argument("--min_child_samples", default=1, type=int)
     parser.add_argument("--max_bin", default=200, type=int)
