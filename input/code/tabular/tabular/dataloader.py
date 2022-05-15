@@ -57,20 +57,107 @@ class Preprocess:
             test = le.transform(df[col])
             df[col] = test
 
-        def convert_time(s):
-            timestamp = time.mktime(
-                datetime.strptime(s, "%Y-%m-%d %H:%M:%S").timetuple()
-            )
-            return int(timestamp)
+        # def convert_time(s):
+        #     timestamp = time.mktime(
+        #         datetime.strptime(s, "%Y-%m-%d %H:%M:%S").timetuple()
+        #     )
+        #     return int(timestamp)
 
-        df["Timestamp"] = df["Timestamp"].apply(convert_time)
+        # df["Timestamp"] = df["Timestamp"].apply(convert_time)
 
         return df
 
     def __feature_engineering(self, df):
-        #유저별 시퀀스를 고려하기 위해 아래와 같이 정렬
-        df.sort_values(by=['userID','Timestamp'], inplace=True)
+         #유저별 시퀀스를 고려하기 위해 아래와 같이 정렬
+        # df.sort_values(by=['userID','Timestamp'], inplace=True)
+        df = df.sort_values(by=['userID', 'Timestamp']).reset_index(drop=True)
         
+        #################################### 0.03
+        # FE. 1 : 문제 푸는 시간 
+        diff = df.loc[:, ['userID', 'Timestamp']].groupby('userID').diff().fillna(pd.Timedelta(seconds=0))
+        diff = diff.fillna(pd.Timedelta(seconds=0))
+        diff = diff['Timestamp'].apply(lambda x: x.total_seconds())
+        df['elapsed'] = diff
+        ####################################
+
+        #################################### 0.003
+        # FE. 2 : 시험지 대분류 (A000 쪼개서) 별 정답률 구하기 
+        df['main_ca'] = df['testId'].str[:4]
+
+        df['main_ca_correct_answer'] = df.groupby('main_ca')['answerCode'].transform(lambda x: x.cumsum().shift(1))
+        df['main_ca_total_answer'] = df.groupby('main_ca')['answerCode'].cumcount()
+        df['main_ca_acc'] = df['main_ca_correct_answer']/df['main_ca_total_answer']
+        ####################################
+
+        ####################################
+        # FE. 3 : 유저별 하나의 시험지를 다 푸는데 걸리는 시간
+        # ⇒ 이상치 처리 후(마지막문제 0초, 오랜만에 푸는 문제 수만초 등) 유저별,시험지별 시간의 평균 
+        normal_elapsed=df[(df['elapsed']!=0) & (df['elapsed']<660)]['elapsed']
+
+        def normalize_outlier(x):
+            if x>660:
+                return np.random.choice(normal_elapsed)
+            else:
+                return x
+
+        df['normal_elapsed'] = df['elapsed'].apply(normalize_outlier)
+        elapsed_test = df.groupby(['userID','testId']).mean()['normal_elapsed']
+        elapsed_test.name='elapsed_test'
+        df = pd.merge(df,elapsed_test, on=['userID','testId'], how="left")
+        ####################################
+
+        ####################################
+        ## FE. 4 : 과거에 푼 문제에 초점을 맞추자 => 과거 해당 문제 평균 정답률 => 약간의 성능 하락
+        df['past_content_count'] = df.groupby(['userID', 'assessmentItemID']).cumcount()
+        df['shift'] = df.groupby(['userID', 'assessmentItemID'])['answerCode'].shift().fillna(0)
+        df['past_content_correct'] = df.groupby(['userID', 'assessmentItemID'])['shift'].cumsum()
+        df.drop(['shift'], axis=1, inplace=True)
+        # 과거 해당 문제 평균 정답률
+        df['average_content_correct'] = (df['past_content_correct'] / df['past_content_count']).fillna(0)
+        ####################################
+
+        ####################################
+        ## FE. 5 : 문항별(accessmentItemID) 정답률 => 성능 매우 높아짐
+        correct_a = df.groupby(['assessmentItemID'])['answerCode'].agg(['mean', 'sum'])
+        correct_a.columns = ["accessment_mean", 'accessment_sum']
+
+        df = pd.merge(df, correct_a, on=['assessmentItemID'], how="left")
+        ####################################
+
+        ####################################
+        ## FE. 6 : 시험지 많이 풀수록 맞출 확률이 높아진다? => 0.0007정도 성능 하락
+        df['testCnt'] = df.groupby(['userID', 'testId']).cumcount()
+        ####################################
+
+        ####################################
+        ## FE. 7 : 문제 풀이 시간대(hour) , 시간대별 정답률(correct_per_hour) 
+        df['hour'] = df['Timestamp'].transform(lambda x: pd.to_datetime(x, unit='s').dt.hour)
+        hour_dict = df.groupby(['hour'])['answerCode'].mean().to_dict()
+        df['correct_per_hour'] = df['hour'].map(hour_dict)
+        ####################################
+
+        ####################################
+        ## FE. 8 : 태그 + 시험지 정답률
+        correct_ka = df.groupby(['KnowledgeTag', 'testId'])['answerCode'].agg(['mean', 'sum'])
+        correct_ka.columns = ["ka_accessment_mean", 'ka_accessment_sum']
+
+        df = pd.merge(df, correct_ka, on=['testId', 'KnowledgeTag'], how="left")
+        ####################################
+
+        ####################################
+        ## FE. 9 : 이동 평균을 사용해 최근 n개 문제 평균 풀이 시간
+        # 기본값은 3, 후에 갯수 조정을해도 좋을듯함
+        # 3개의 값이 되지 않는 경우 0으로 처리
+        df['mean_time_second'] = df.groupby(['userID'])['normal_elapsed'].rolling(3).mean().fillna(0).values
+
+        ###################################
+        # FE. 10 : 문항번호 + 태그 => 약간의 성능 하락
+        df['problem_num'] = df['assessmentItemID'].str[-3:]
+        df['access_tag'] = df['problem_num'].map(str) + '_' + df['KnowledgeTag'].map(str)
+        ###################################
+
+        ####################################
+        # base FE
         #유저들의 문제 풀이수, 정답 수, 정답률을 시간순으로 누적해서 계산
         df['user_correct_answer'] = df.groupby('userID')['answerCode'].transform(lambda x: x.cumsum().shift(1))
         df['user_total_answer'] = df.groupby('userID')['answerCode'].cumcount()
@@ -85,22 +172,34 @@ class Preprocess:
 
         df = pd.merge(df, correct_t, on=['testId'], how="left")
         df = pd.merge(df, correct_k, on=['KnowledgeTag'], how="left")
+        ####################################
+
 
         # (2) FEATS는 FE가 직접적으로 작동이 되는 부분에서 언급되는것이 좋을것 같다.
-        self.FEATS = ['KnowledgeTag', 'user_correct_answer', 'user_total_answer', 
-            'user_acc', 'test_mean', 'test_sum', 'tag_mean','tag_sum']
+        self.FEATS = ['KnowledgeTag', 'assessmentItemID', 'user_correct_answer', 'user_total_answer', 
+            'user_acc', 'test_mean', 'test_sum', 'tag_mean','tag_sum',
+            'elapsed','main_ca_correct_answer','main_ca_total_answer','main_ca_acc','elapsed_test',
+            'accessment_mean', 'accessment_sum', 'ka_accessment_mean', 'ka_accessment_sum', 'mean_time_second']
 
         # TODO catboost는 Categorical columns name을 지정해줘야한다.
         #self.CATS = ['KnowledgeTag']
-        self.CATS = []
+        self.CATS = ['KnowledgeTag', 'assessmentItemID']
+
+        df.sort_values(by=['userID','Timestamp'], inplace=True)
+
         return df
 
     def load_data_from_file(self, test_file_name, train_file_name=None, is_train = True):
+        dtype = {
+            'userID': 'int16',
+            'answerCode': 'int8',
+            'KnowledgeTag': 'int16'
+            }          
         test_csv_file_path = os.path.join(self.args.data_dir, test_file_name)
-        test_df = pd.read_csv(test_csv_file_path)
+        test_df = pd.read_csv(test_csv_file_path, dtype=dtype, parse_dates=['Timestamp'])
         
         train_csv_file_path = os.path.join(self.args.data_dir, train_file_name)
-        train_df = pd.read_csv(train_csv_file_path)
+        train_df = pd.read_csv(train_csv_file_path, dtype=dtype, parse_dates=['Timestamp'])
         self.train_userID = train_df['userID'].unique().tolist() 
 
         df = pd.concat([train_df, test_df], axis= 0)
@@ -136,16 +235,15 @@ class Preprocess:
         self.test_data = self.test_data[self.FEATS]
 
     def convert_dataset(self, train_data, valid_data):
-        if self.args.model == 'lightgbm':
-            lgb_train, lgb_valid, X_valid, y_valid = self.get_lgb_data(train_data, valid_data, self.FEATS)
-            return lgb_train, lgb_valid, X_valid, y_valid
-        
-        elif self.args.model == 'catboost':
+        if self.args.model == 'catboost':
             cb_train, cb_valid, X_valid, y_valid = self.get_cb_data(train_data, valid_data, self.FEATS, self.CATS)
             return cb_train, cb_valid, X_valid, y_valid
 
+        else:
+            X_train, y_train, X_valid, y_valid = self.get_data(train_data, valid_data, self.FEATS)
+            return X_train, y_train, X_valid, y_valid
 
-    def get_lgb_data(self, train, valid, FEATS):
+    def get_data(self, train, valid, FEATS):
         # X, y 값 분리
         y_train = train['answerCode']
         X_train = train.drop(['answerCode'], axis=1)

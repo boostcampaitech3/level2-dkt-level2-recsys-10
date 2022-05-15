@@ -7,6 +7,9 @@ import wandb
 import lightgbm as lgb
 from catboost import CatBoostClassifier
 from wandb.lightgbm import wandb_callback
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
+from sklearn.svm import SVC
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import accuracy_score
 import joblib
@@ -22,7 +25,17 @@ def run(args, train_data, valid_data, X_valid, y_valid):
             objective = 'binary',
             learning_rate = args.learning_rate,
             n_estimators = args.num_boost_round,
-            max_depth = args.max_depth
+            max_depth = args.max_depth,
+            num_leaves = args.num_leaves,
+            min_data_in_leaf = args.min_data_in_leaf,
+            lambda_l1 = args.lambda_l1,
+            lambda_l2 = args.lambda_l2,
+            min_gain_to_split = args.min_gain_to_split,
+            bagging_fraction = args.bagging_fraction,
+            feature_fraction = args.feature_fraction,
+            bagging_freq  = args.bagging_freq,
+            path_smooth = args.path_smooth,
+            max_bin= args.max_bin
         )
 
         model.fit(
@@ -50,8 +63,16 @@ def run(args, train_data, valid_data, X_valid, y_valid):
             learning_rate=args.learning_rate, # TODO lr 관련 파라미터 확인하기
             task_type='GPU', # TODO GPU 사용 가능할 때만 사용하록 if 문으로 변경
             custom_loss = custom_loss,
-            max_depth = args.max_depth
+            max_depth = args.max_depth,
+            bagging_temperature = args.bagging_temperature,
+            random_strength = args.random_strength,
+            # colsample_bylevel = args.colsample_bylevel,
+            l2_leaf_reg = args.l2_leaf_reg,
+            min_child_samples = args.min_child_samples,
+            max_bin = args.max_bin,
+            od_type = args.od_type
         )
+
         model.fit(
             train_data, 
             eval_set=valid_data, 
@@ -59,10 +80,31 @@ def run(args, train_data, valid_data, X_valid, y_valid):
             # cat_features = # TODO category feature 목록 넣기
             early_stopping_rounds=args.early_stopping_rounds, 
             verbose=args.verbose_eval)
+    
+    else:
+        # data 이름 변경
+        X_train = train_data
+        y_train = valid_data
 
+        drop_column = ['user_correct_answer', 'user_acc', 'main_ca_correct_answer', 'main_ca_acc']
+        X_train.drop(drop_column, axis=1 , inplace = True)
+        X_valid.drop(drop_column, axis=1, inplace = True)
+
+        if args.model == 'lda':
+            model = LinearDiscriminantAnalysis().fit(X_train, y_train)
+        
+        elif args.model == 'qda':
+            model = QuadraticDiscriminantAnalysis().fit(X_train, y_train)
+    
+        elif args.model == 'svc':
+            model = SVC(kernel='linear').fit(X_train, y_train)
+
+        auc, acc = model_predict(args, model, X_valid, y_valid)
+        args.auc = auc
     
     # auc, acc = model_predict(args, model, X_valid, y_valid)
-    # save_model(args, model)
+    # args.auc = auc
+    
 
     if args.model == 'lightgbm':
         eval_result = model.evals_result_
@@ -80,6 +122,9 @@ def run(args, train_data, valid_data, X_valid, y_valid):
                 "itration" : i
             })   
 
+        args.auc = eval_result[list_run[1]][custom_loss[0]][i]
+
+
     elif args.model == 'catboost':
         eval_result = model.get_evals_result()
         list_run = ['learn', 'validation']
@@ -94,6 +139,10 @@ def run(args, train_data, valid_data, X_valid, y_valid):
                 "itration" : i
             })
 
+        args.auc = eval_result[list_run[1]][custom_loss[0]][i]
+
+    save_model(args, model)
+
 def lgb_acc(y_true, y_pred):
     y_pred = np.where(y_pred >= 0.5, 1., 0.)   
     return ('acc', np.mean(y_pred==y_true), False)
@@ -106,11 +155,10 @@ def lgb_acc(y_true, y_pred):
 #     return ('acc', np.mean(y_pred==y_true), False)
 
 def model_predict(args, model, X_valid, y_valid):
-    if args.model == 'lightgbm':
-        preds = model.predict(X_valid)
-    elif args.model == 'catboost':
+    if args.model == 'catboost':
         preds = model.predict(X_valid, prediction_type='Probability')[:, 1]
-
+    else:
+        preds = model.predict_proba(X_valid)[:, 1]
     acc = accuracy_score(y_valid, np.where(preds >= 0.5, 1, 0))
     auc = roc_auc_score(y_valid, preds)
 
@@ -119,6 +167,11 @@ def model_predict(args, model, X_valid, y_valid):
 
 def inference(args, test_data):    
     model = load_model(args)
+
+    if args.model not in ['lightgbm', 'catboost']:
+        drop_column = ['user_correct_answer', 'user_acc', 'main_ca_correct_answer', 'main_ca_acc']
+        test_data.drop(drop_column, axis=1 , inplace = True)
+
     total_preds = model.predict_proba(test_data)[:,1]
     write_path = os.path.join(args.output_dir, "submission.csv")
     if not os.path.exists(args.output_dir):
@@ -130,7 +183,7 @@ def inference(args, test_data):
 
 def load_model(args):
 
-    model_path = os.path.join(args.model_dir, args.model_name)
+    model_path = os.path.join(args.model_dir, f'{args.model}.pkl')
     print("Loading Model from:", model_path)
     # load_state = torch.load(model_path)
     # model = get_model(args)
@@ -144,7 +197,7 @@ def load_model(args):
 
 def save_model(args, model):
 
-    model_path = os.path.join(args.model_dir, args.model_name)
+    model_path = os.path.join(args.model_dir, f'{args.model}_{args.auc:.4f}.pkl')
     print("Saving Model from:", model_path)
 
     joblib.dump(model, model_path)
