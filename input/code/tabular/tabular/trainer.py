@@ -13,11 +13,28 @@ from sklearn.svm import SVC
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import accuracy_score
 import joblib
+import matplotlib.pyplot as plt
 
-def run(args, train_data, valid_data, X_valid, y_valid):
+from .utils import get_cate_cols, get_wandb_config, get_cate_cols
+
+def run(args, train_data, valid_data, X_valid, y_valid, preprocess, cate):
+    if args.sweep_feats:
+    # DataLoad 시에 Feature를 변경함
+        preprocess.FEATS = get_wandb_config(args)
+        train_data = preprocess.get_train_data()
+        valid_data = preprocess.get_valid_data()
+        preprocess.CATS = get_cate_cols(preprocess, cate)
+        train_data, valid_data, X_valid, y_valid = preprocess.convert_dataset(train_data, valid_data)
+        X_train = train_data
+        y_train = valid_data
+        
+        print('********************preprocess.FEATS after*************************') 
+        print(preprocess.FEATS)
+        print(preprocess.CATS)
+
     if args.model == 'lightgbm':
         custom_loss = ["auc", lgb_acc]
-        # data 이름 변경
+
         X_train = train_data
         y_train = valid_data
 
@@ -26,22 +43,22 @@ def run(args, train_data, valid_data, X_valid, y_valid):
             learning_rate = args.learning_rate,
             n_estimators = args.num_boost_round,
             max_depth = args.max_depth,
-            num_leaves = args.num_leaves,
-            min_data_in_leaf = args.min_data_in_leaf,
-            lambda_l1 = args.lambda_l1,
-            lambda_l2 = args.lambda_l2,
-            min_gain_to_split = args.min_gain_to_split,
-            bagging_fraction = args.bagging_fraction,
-            feature_fraction = args.feature_fraction,
-            bagging_freq  = args.bagging_freq,
-            path_smooth = args.path_smooth,
-            max_bin= args.max_bin
+            # num_leaves = args.num_leaves,
+            # min_data_in_leaf = args.min_data_in_leaf,
+            # lambda_l1 = args.lambda_l1,
+            # lambda_l2 = args.lambda_l2,
+            # min_gain_to_split = args.min_gain_to_split,
+            # bagging_fraction = args.bagging_fraction,
+            # feature_fraction = args.feature_fraction,
+            # bagging_freq  = args.bagging_freq,
+            # path_smooth = args.path_smooth,
+            # max_bin= args.max_bin
         )
 
         model.fit(
-            X = X_train, 
+            X = X_train[preprocess.FEATS], 
             y = y_train,
-            eval_set = [(X_train,y_train),(X_valid,y_valid)],
+            eval_set = [(X_train[preprocess.FEATS],y_train),(X_valid[preprocess.FEATS],y_valid)],
             eval_names=['train','validation'],
             eval_metric = custom_loss,
             verbose=args.verbose_eval,
@@ -77,7 +94,7 @@ def run(args, train_data, valid_data, X_valid, y_valid):
             train_data, 
             eval_set=valid_data, 
             use_best_model=True, 
-            # cat_features = # TODO category feature 목록 넣기
+            # cat_features = preprocess.CATS,# TODO category feature 목록 넣기
             early_stopping_rounds=args.early_stopping_rounds, 
             verbose=args.verbose_eval)
     
@@ -199,5 +216,4 @@ def save_model(args, model):
 
     model_path = os.path.join(args.model_dir, f'{args.model}_{args.auc:.4f}.pkl')
     print("Saving Model from:", model_path)
-
     joblib.dump(model, model_path)

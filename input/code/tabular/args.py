@@ -38,7 +38,7 @@ def parse_args(mode="train"):
 
     # 모델 파라미터
     parser.add_argument("--model", default="lightgbm", type=str, help="model type")
-    parser.add_argument("--learning_rate", default=0.001, type=float, help="model learning_rate")
+    parser.add_argument("--learning_rate", default=0.01, type=float, help="model learning_rate")
 
     parser.add_argument("--objective", default='binary', type=str)
     parser.add_argument("--verbose_eval", default=100, type=int)
@@ -73,6 +73,8 @@ def parse_args(mode="train"):
     parser.add_argument("--sweep_count", default=10, type=int, help="sweep count")
     parser.add_argument("--sweep_method", type=str, default='bayes', help='grid, random, bayes' )
     parser.add_argument("--sweep_name", type=str, default='test', help='grid, random, bayes' )
+    parser.add_argument("--sweep_feats", action="store_true", help="sweep feats tune type")
+
     args = parser.parse_args()
 
     return args

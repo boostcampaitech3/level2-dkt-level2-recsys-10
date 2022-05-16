@@ -11,7 +11,6 @@ import lightgbm as lgb
 from catboost import Pool
 from sklearn.preprocessing import LabelEncoder
 
-
 class Preprocess:
     def __init__(self, args):
         self.args = args
@@ -33,7 +32,7 @@ class Preprocess:
         np.save(le_path, encoder.classes_)
 
     def __preprocessing(self, df, is_train=True):
-        cate_cols = ["assessmentItemID", "testId", "KnowledgeTag"]
+        cate_cols = self.CATS #["assessmentItemID", "testId", "KnowledgeTag",'problem_mid_cat', 'accessment_mean_ca']
 
         if not os.path.exists(self.args.asset_dir):
             os.makedirs(self.args.asset_dir)
@@ -68,10 +67,28 @@ class Preprocess:
         return df
 
     def __feature_engineering(self, df):
-         #유저별 시퀀스를 고려하기 위해 아래와 같이 정렬
+        #유저별 시퀀스를 고려하기 위해 아래와 같이 정렬
         # df.sort_values(by=['userID','Timestamp'], inplace=True)
         df = df.sort_values(by=['userID', 'Timestamp']).reset_index(drop=True)
         
+        ####################################
+        # base FE
+        #유저들의 문제 풀이수, 정답 수, 정답률을 시간순으로 누적해서 계산
+        df['user_correct_answer'] = df.groupby('userID')['answerCode'].transform(lambda x: x.cumsum().shift(1))
+        df['user_total_answer'] = df.groupby('userID')['answerCode'].cumcount()
+        df['user_acc'] = df['user_correct_answer']/df['user_total_answer']
+
+        # testId와 KnowledgeTag의 전체 정답률은 한번에 계산
+        # 아래 데이터는 제출용 데이터셋에 대해서도 재사용
+        correct_t = df.groupby(['testId'])['answerCode'].agg(['mean', 'sum'])
+        correct_t.columns = ["test_mean", 'test_sum']
+        correct_k = df.groupby(['KnowledgeTag'])['answerCode'].agg(['mean', 'sum'])
+        correct_k.columns = ["tag_mean", 'tag_sum']
+
+        df = pd.merge(df, correct_t, on=['testId'], how="left")
+        df = pd.merge(df, correct_k, on=['KnowledgeTag'], how="left")
+        ####################################
+
         #################################### 0.03
         # FE. 1 : 문제 푸는 시간 
         diff = df.loc[:, ['userID', 'Timestamp']].groupby('userID').diff().fillna(pd.Timedelta(seconds=0))
@@ -149,6 +166,7 @@ class Preprocess:
         # 기본값은 3, 후에 갯수 조정을해도 좋을듯함
         # 3개의 값이 되지 않는 경우 0으로 처리
         df['mean_time_second'] = df.groupby(['userID'])['normal_elapsed'].rolling(3).mean().fillna(0).values
+        ####################################
 
         ###################################
         # FE. 10 : 문항번호 + 태그 => 약간의 성능 하락
@@ -156,37 +174,62 @@ class Preprocess:
         df['access_tag'] = df['problem_num'].map(str) + '_' + df['KnowledgeTag'].map(str)
         ###################################
 
+        ###################################
+        # FE. 11 : 시험지 대분류 => 난이도 => 리더보드에서는 성능 하락
+        df['testId_first'] = df['assessmentItemID'].str[1:4].map(str)
+        ###################################
+
+        ###################################
+        # FE. 12 : 'userID', 'KnowledgeTag' 그룹화 => cumcount => 성능 약간 하락
+        df['user_tag_cnt'] = df.groupby(['userID', 'KnowledgeTag']).cumcount()
+        ###################################
+
+        ###################################
+        # FE. 13 : tag 정답률 * accessmentItemID 정답률 => 성능 상승
+        df['tag_accessmentID_mul'] = df['tag_mean'] * df['accessment_mean']
+        ###################################
+
         ####################################
-        # base FE
-        #유저들의 문제 풀이수, 정답 수, 정답률을 시간순으로 누적해서 계산
-        df['user_correct_answer'] = df.groupby('userID')['answerCode'].transform(lambda x: x.cumsum().shift(1))
-        df['user_total_answer'] = df.groupby('userID')['answerCode'].cumcount()
-        df['user_acc'] = df['user_correct_answer']/df['user_total_answer']
+        # FE. 14 : 문제별 앞에 문제인지 뒤에문제인지 problem_mid_cat (catagory)
+        df['problem_num'] = df['assessmentItemID'].str[-3:]
 
-        # testId와 KnowledgeTag의 전체 정답률은 한번에 계산
-        # 아래 데이터는 제출용 데이터셋에 대해서도 재사용
-        correct_t = df.groupby(['testId'])['answerCode'].agg(['mean', 'sum'])
-        correct_t.columns = ["test_mean", 'test_sum']
-        correct_k = df.groupby(['KnowledgeTag'])['answerCode'].agg(['mean', 'sum'])
-        correct_k.columns = ["tag_mean", 'tag_sum']
+        testId_group = df.loc[:, ['testId', 'problem_num']]
+        testId_group = testId_group.drop_duplicates()
+        testId_group = testId_group.groupby('testId').agg('count').reset_index()
+        testId_group.columns = ['testId', 'problem_cnt']
 
-        df = pd.merge(df, correct_t, on=['testId'], how="left")
-        df = pd.merge(df, correct_k, on=['KnowledgeTag'], how="left")
-        ####################################
+        testId_group['problem_cnt_mid'] = testId_group['problem_cnt'].apply(lambda x : x//2)
+        df = pd.merge(df, testId_group, on=['testId'], how="left")
+        df['problem_num'] = df['problem_num'].apply(lambda x : int(x))
+        df['problem_mid_cat']  = df.apply(lambda x : 0 if int(x.problem_num) < x.problem_cnt_mid else 1, axis = 1)
+        ###################################
 
+        ###################################
+        # FE. 15 : accessmentItemID 정답률 범주화
+        problem_mean_lower = df['accessment_mean'].quantile(0.25)
+        problem_mean_median = df['accessment_mean'].quantile(0.5)
+        problem_mean_upper = df['accessment_mean'].quantile(0.75)
+
+        df['accessment_mean_ca'] = df['accessment_mean'].apply(
+            lambda x: "4" if x <= problem_mean_lower
+            else ("3" if x <= problem_mean_median
+            else "2" if x <= problem_mean_upper else "1")
+        )
+        ###################################
 
         # (2) FEATS는 FE가 직접적으로 작동이 되는 부분에서 언급되는것이 좋을것 같다.
         self.FEATS = ['KnowledgeTag', 'assessmentItemID', 'user_correct_answer', 'user_total_answer', 
             'user_acc', 'test_mean', 'test_sum', 'tag_mean','tag_sum',
             'elapsed','main_ca_correct_answer','main_ca_total_answer','main_ca_acc','elapsed_test',
-            'accessment_mean', 'accessment_sum', 'ka_accessment_mean', 'ka_accessment_sum', 'mean_time_second']
+            'accessment_mean', 'accessment_sum', 'ka_accessment_mean', 'ka_accessment_sum', 'mean_time_second',
+            'tag_accessmentID_mul', 'accessment_mean_ca', 'problem_mid_cat']
+            # 'userID', 'user_tag_cnt']
 
         # TODO catboost는 Categorical columns name을 지정해줘야한다.
         #self.CATS = ['KnowledgeTag']
-        self.CATS = ['KnowledgeTag', 'assessmentItemID']
+        self.CATS = ['KnowledgeTag', 'assessmentItemID','problem_mid_cat', 'accessment_mean_ca']
 
         df.sort_values(by=['userID','Timestamp'], inplace=True)
-
         return df
 
     def load_data_from_file(self, test_file_name, train_file_name=None, is_train = True):
@@ -197,18 +240,21 @@ class Preprocess:
             }          
         test_csv_file_path = os.path.join(self.args.data_dir, test_file_name)
         test_df = pd.read_csv(test_csv_file_path, dtype=dtype, parse_dates=['Timestamp'])
-        
+        test_userids = test_df.userID.unique()
+
         train_csv_file_path = os.path.join(self.args.data_dir, train_file_name)
         train_df = pd.read_csv(train_csv_file_path, dtype=dtype, parse_dates=['Timestamp'])
         self.train_userID = train_df['userID'].unique().tolist() 
 
         df = pd.concat([train_df, test_df], axis= 0)
-        df = self.__feature_engineering(df)
-        df = self.__preprocessing(df, is_train)
+        df = self.__feature_engineering(df) # FEATS 결정 
+        df = self.__preprocessing(df, is_train) # 인코딩/타입 결정
 
         # seperate test and valid data
+
         self.test_index = df.answerCode == -1
         self.valid_index = np.array(self.test_index[1:].tolist() + [False])
+        self.valid_dataset = df[df['userID'].isin(test_userids)].query('answerCode != -1').groupby(['userID', 'testId']).sample(1).groupby('userID').sample(3)
 
         self.args.n_questions = len(
             np.load(os.path.join(self.args.asset_dir, "assessmentItemID_classes.npy"))
@@ -225,8 +271,10 @@ class Preprocess:
     def load_train_data(self, test_file_name, train_file_name):
         data = self.load_data_from_file(test_file_name, train_file_name)
         # train data에는 test data의 유저에 대한 정보가 포함되면 안되므로(양심상, 규제는 완화된 것으로 보이기때문에 이 부분은 따로 수정해줄 필요도 있을 것 같다)
-        self.train_data = data.merge(pd.Series(self.train_userID, name='userID'), how = 'inner', on = 'userID')
-        self.valid_data = data[self.valid_index].query("answerCode != -1")
+        # self.train_data = data.merge(pd.Series(self.train_userID, name='userID'), how = 'inner', on = 'userID')
+        self.train_data = data[self.valid_index == False].query("answerCode != -1")
+        # self.valid_data = data[self.valid_index].query("answerCode != -1")
+        self.valid_data = data.merge(self.valid_dataset, on = list(self.valid_dataset.columns), how='inner')
 
     def load_test_data(self, test_file_name, train_file_name):
         data = self.load_data_from_file(test_file_name, train_file_name, is_train=False)

@@ -1,10 +1,26 @@
 from args import parse_args
+from tabular.dataloader import Preprocess
+# from tabular.utils import get_feats_sweep_dict
 
 # link:  https://towardsdatascience.com/kagglers-guide-to-lightgbm-hyperparameter-tuning-with-optuna-in-2021-ed048d9838b5
 
 args = parse_args(mode="train")
 
-sweep_config = {
+if args.sweep_feats:
+    # FEATS 튜닝
+    sweep_config = {
+        'name' : args.model + ' : ' + args.sweep_name,
+        'method': args.sweep_method,
+        'metric' : {
+            'name': 'validation_auc',
+            'goal': 'maximize'   
+            },
+        # 'parameters' : {} # {'f1' :{ 'values' : [True, False]}, {f2 : ...} ... }
+        }
+
+else:
+    # HyperParams 튜닝
+    sweep_config = {
     'name' : args.model + ' : ' + args.sweep_name,
     'method': args.sweep_method,
     'metric' : {
@@ -29,12 +45,17 @@ sweep_config = {
         #     'max': 300
         #     },
 
-        # 'max_depth':{
-        #     # 'values':[i for i in range(-1,30,2)] # LGBM
-        #     'distribution': 'int_uniform',
-        #     'min': 3,
-        #     'max': 12  
-        #     # 'values':[i for i in range(1,16,2)] # CatBoost 최대 16
+        'max_depth':{
+            # 'values':[i for i in range(-1,30,2)] # LGBM
+            # 'distribution': 'int_uniform',
+            # 'min': 3,
+            # 'max': 12  
+            'values':[i for i in range(1,16,2)] # CatBoost 최대 16
+            },
+
+        # lightgbm
+        # 'num_leaves':{
+        #     'values':[i for i in range(20,3000,20)] # LGBM
         #     },
         
         # lightgbm
@@ -84,7 +105,7 @@ sweep_config = {
         #     'max': 255
         #     },
 
-         # catboost
+        # catboost
         'bagging_temperature':{
             'distribution': 'uniform',
             'min': 0.01,
@@ -125,6 +146,9 @@ sweep_config = {
             'values': ['IncToDec', 'Iter']
             },
 
+        'od_type':{
+            'values': ['IncToDec', 'Iter']
+            },
         }
 
     }
