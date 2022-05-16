@@ -35,7 +35,7 @@ else:
             },
         'num_boost_round' :{
             'distribution': 'int_uniform',
-            'min': 100,
+            'min': 1000,
             'max': 3000
             },
 
@@ -53,6 +53,11 @@ else:
             'values':[i for i in range(1,16,2)] # CatBoost 최대 16
             },
 
+        # lightgbm
+        # 'num_leaves':{
+        #     'values':[i for i in range(20,3000,20)] # LGBM
+        #     },
+        
         # lightgbm
         # 'num_leaves':{
         #     'values':[i for i in range(20,3000,20)] # LGBM
@@ -113,11 +118,11 @@ else:
             'max': 100
             },
         
-        'colsample_bylevel':{
-            'distribution': 'uniform',
-            'min': 0.4,
-            'max': 1.0
-            },
+        # 'colsample_bylevel':{
+        #     'distribution': 'uniform',
+        #     'min': 0.4,
+        #     'max': 1.0
+        #     },
             
         'l2_leaf_reg':{
             'distribution': 'uniform',
@@ -135,6 +140,10 @@ else:
             'distribution': 'int_uniform',
             'min': 200,
             'max': 500
+            },
+
+        'od_type':{
+            'values': ['IncToDec', 'Iter']
             },
 
         'od_type':{

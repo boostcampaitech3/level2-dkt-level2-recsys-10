@@ -283,16 +283,15 @@ class Preprocess:
         self.test_data = self.test_data[self.FEATS]
 
     def convert_dataset(self, train_data, valid_data):
-        if self.args.model == 'lightgbm':
-            lgb_train, lgb_valid, X_valid, y_valid = self.get_lgb_data(train_data, valid_data, self.FEATS)
-            return lgb_train, lgb_valid, X_valid, y_valid
-        
-        elif self.args.model == 'catboost':
+        if self.args.model == 'catboost':
             cb_train, cb_valid, X_valid, y_valid = self.get_cb_data(train_data, valid_data, self.FEATS, self.CATS)
             return cb_train, cb_valid, X_valid, y_valid
 
+        else:
+            X_train, y_train, X_valid, y_valid = self.get_data(train_data, valid_data, self.FEATS)
+            return X_train, y_train, X_valid, y_valid
 
-    def get_lgb_data(self, train, valid, FEATS):
+    def get_data(self, train, valid, FEATS):
         # X, y 값 분리
         y_train = train['answerCode']
         X_train = train.drop(['answerCode'], axis=1)
