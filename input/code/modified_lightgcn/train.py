@@ -24,7 +24,7 @@ def main():
 
     logger.info("[1/1] Data Preparing - Start")
     # n_node = len(user+item)
-    train_data, valid_data, test_data, n_node = prepare_dataset(
+    train_data, valid_data, test_data, side_infos, nums_infos, n_node = prepare_dataset(
         device, CFG.basepath, verbose=CFG.loader_verbose, logger=logger.getChild("data")
     )
     logger.info("[1/1] Data Preparing - Done")
@@ -42,7 +42,9 @@ def main():
             w_config = wandb.config
 
             model = build(
-                n_node,
+                side_infos=side_infos, 
+                nums_infos=nums_infos,
+                num_nodes=n_node,
                 embedding_dim=w_config.hidden_dim,
                 num_layers=w_config.n_layers,
                 alpha=w_config.alpha,
@@ -71,7 +73,9 @@ def main():
         wandb.init(config=class2dict(CFG), entity="egsbj", project="lightgcn")
 
         model = build(
-            n_node,
+            side_infos=side_infos, 
+            nums_infos=nums_infos,
+            num_nodes=n_node,
             embedding_dim=CFG.hidden_dim,
             num_layers=CFG.n_layers,
             alpha=CFG.alpha,

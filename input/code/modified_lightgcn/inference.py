@@ -19,14 +19,19 @@ def main():
     logger.info("Task Started")
 
     logger.info("[1/4] Data Preparing - Start")
-    train_data, valid_data, test_data, n_node = prepare_dataset(
+    # train_data, valid_data, test_data, n_node = prepare_dataset(
+    #     device, CFG.basepath, verbose=CFG.loader_verbose, logger=logger.getChild("data")
+    # )
+    train_data, valid_data, test_data, side_infos, nums_infos, n_node = prepare_dataset(
         device, CFG.basepath, verbose=CFG.loader_verbose, logger=logger.getChild("data")
     )
     logger.info("[1/4] Data Preparing - Done")
 
     logger.info("[2/4] Model Building - Start")
     model = build(
-        n_node,
+        side_infos=side_infos, 
+        nums_infos=nums_infos,
+        num_nodes=n_node,
         embedding_dim=CFG.hidden_dim,
         num_layers=CFG.n_layers,
         alpha=CFG.alpha,

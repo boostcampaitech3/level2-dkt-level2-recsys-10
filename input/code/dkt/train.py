@@ -7,6 +7,7 @@ from dkt import trainer
 from dkt.dataloader import Preprocess
 from dkt.utils import setSeeds
 
+import config
 
 def main(args):
     wandb.login()
@@ -16,14 +17,23 @@ def main(args):
     args.device = device
 
     preprocess = Preprocess(args)
-    preprocess.load_train_data(args.file_name)
+    preprocess.load_train_data(test_file_name= args.test_file_name, train_file_name= args.file_name)
     train_data = preprocess.get_train_data()
+    valid_data = preprocess.get_valid_data()
+    
+    # run the sweep
+    if args.sweep:
+        def runner():
+            wandb.init(config=vars(args))
+            w_config = wandb.config
+            trainer.run(w_config, train_data, valid_data)
 
-    train_data, valid_data = preprocess.split_data(train_data)
-
-    wandb.init(project="dkt", config=vars(args))
-    trainer.run(args, train_data, valid_data)
-
+        sweep_id = wandb.sweep(config.sweep_config, entity="egsbj", project="DKT")
+        wandb.agent(sweep_id, runner, count=args.sweep_count)
+    
+    else:
+        wandb.init(config=vars(args), name=args.model, entity="egsbj", project="DKT")
+        trainer.run(args, train_data, valid_data)
 
 if __name__ == "__main__":
     args = parse_args(mode="train")

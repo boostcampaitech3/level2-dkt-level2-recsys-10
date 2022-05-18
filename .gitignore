@@ -13,14 +13,19 @@ __MACOSX/
 *special_mission/
 .nv/
 *wandb/
+asset/
+models/
+weight/
+catboost_info/
 
 ## data
 *.tsv
 *.json
 *.csv
-*.txt
+# *.txt
 *.sh
 *.out
+*.log
 
 ## file
 .bash_history
@@ -39,6 +44,7 @@ __pycache__
 .netrc
 .screenrc
 *test.ipynb
+.git-credentials
 
 ## shell script
 *run.sh 
