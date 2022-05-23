@@ -12,6 +12,7 @@ pip install -r requirements.txt
 - lightgbm
 - catboost
 - lda
+- qda
 - svc
 
 # 파일
