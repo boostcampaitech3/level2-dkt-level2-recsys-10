@@ -100,6 +100,9 @@ level2-dkt-level2-recsys-10
     └── validation_strategy.png
 ```
 
+## ✨ WRAP-UP REPORT
+- [WRAP-UP REPORT](https://poised-speedwell-186.notion.site/P-Stage-3-WRAP-UP-REPORT-8f8b0d9b73654e8dab33b776fd8b5eed)
+
 ## 👨‍👩‍👧‍👧 Collaborate Working
 - Git Flow 브랜치 전략
 <img width="500" height="300" alt="Git Flow" src="https://user-images.githubusercontent.com/44939208/169699327-9c5ccda0-bd2f-46ee-a670-afc02ffea8ea.gif">
@@ -118,7 +121,6 @@ level2-dkt-level2-recsys-10
 
 - Notion을 활용한 실험 기록 정리
 <img width="500" height="300" alt="Notion" src="https://user-images.githubusercontent.com/44939208/169704735-c34b057a-0c28-4a77-a864-253a1ecef375.gif">
-
 
 ## 📜 Reference
 - [Weights & Biases Quickstart](https://docs.wandb.ai/quickstart)
